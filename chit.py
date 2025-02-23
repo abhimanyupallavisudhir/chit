@@ -4,12 +4,6 @@ import uuid
 import json
 from litellm import completion
 
-ALIASES = {
-    "deepseek": "openrouter/deepseek/deepseek-chat",
-    "claude": "openrouter/anthropic/claude-3.5-sonnet",
-    "oldclaude": "openrouter/anthropic/claude-3.5-sonnet-20240620",
-}
-
 @dataclass
 class Message:
     id: str
@@ -20,7 +14,8 @@ class Message:
 
 class Chat:
     def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
-        self.model = ALIASES.get(model, model)
+        self.model = model
+        self.remote = None
         initial_id = str(uuid.uuid4())
         
         # Initialize with system message
@@ -67,8 +62,6 @@ class Chat:
         # Update checkout
         self.current_id = new_id
         
-        # return new_id
-
     def branch(self, branch_name: str) -> None:
         if branch_name in self.messages[self.current_id].children:
             raise ValueError(f"Branch {branch_name} already exists at this point")
@@ -100,24 +93,28 @@ class Chat:
             
         return history
 
-    def push(self, filename: str) -> None:
-        """Save chat history to JSON file"""
+    def push(self) -> None:
+        """Save chat history to configured remote"""
+        if self.remote is None:
+            raise ValueError("No remote configured. Set chat.remote first.")
+            
         data = {
             "model": self.model,
             "messages": {k: vars(v) for k, v in self.messages.items()},
             "current_id": self.current_id,
             "current_branch": self.current_branch
         }
-        with open(filename, 'w') as f:
+        with open(self.remote, 'w') as f:
             json.dump(data, f)
 
     @classmethod
-    def clone(cls, filename: str) -> 'Chat':
-        """Create new Chat instance from JSON file"""
-        with open(filename, 'r') as f:
+    def clone(cls, remote: str) -> 'Chat':
+        """Create new Chat instance from remote file"""
+        with open(remote, 'r') as f:
             data = json.load(f)
         
         chat = cls(model=data["model"])
+        chat.remote = remote  # Set remote automatically when cloning
         chat.messages = {k: Message(**v) for k, v in data["messages"].items()}
         chat.current_id = data["current_id"]
         chat.current_branch = data["current_branch"]
