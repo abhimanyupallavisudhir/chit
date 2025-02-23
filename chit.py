@@ -42,7 +42,7 @@ class Chat:
             # Generate AI response
             history = self._get_message_history()
             response = completion(model=self.model, messages=history)
-            message = response
+            message = response.choices[0].message.content
         
         # Create new message
         new_message = Message(
@@ -61,6 +61,8 @@ class Chat:
         
         # Update checkout
         self.current_id = new_id
+
+        return new_message.message["content"]
         
     def branch(self, branch_name: str) -> None:
         if branch_name in self.messages[self.current_id].children:
