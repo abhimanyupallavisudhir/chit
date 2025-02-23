@@ -70,6 +70,23 @@ class Chat:
         
         self.messages[self.current_id].children[branch_name] = None
 
+    def _resolve_forward_path(self, branch_path: list[str], start_id: Optional[str] = None) -> str:
+        """Follow a path of branches forward from start_id (or current_id if None)"""
+        current = start_id if start_id is not None else self.current_id
+        
+        for branch in branch_path:
+            current_msg = self.messages[current]
+            if branch not in current_msg.children:
+                raise KeyError(f"Branch '{branch}' not found in message {current}")
+            
+            next_id = current_msg.children[branch]
+            if next_id is None:
+                raise IndexError(f"Branch '{branch}' exists but has no message in {current}")
+                
+            current = next_id
+            
+        return current
+
     def _resolve_negative_index(self, index: int) -> str:
         """Convert negative index to message ID by walking up the tree"""
         if index >= 0:
@@ -86,12 +103,16 @@ class Chat:
             
         return current
 
-    def checkout(self, message_id: Optional[str | int] = None, branch_name: Optional[str] = None) -> None:
+    def checkout(self, message_id: Optional[str | int | list[str]] = None, branch_name: Optional[str] = None) -> None:
         if message_id is not None:
             if isinstance(message_id, int):
                 if message_id >= 0:
                     raise ValueError("Positive integer indices not supported")
                 message_id = self._resolve_negative_index(message_id)
+            elif isinstance(message_id, list):
+                if not all(isinstance(k, str) for k in message_id):
+                    raise TypeError("Branch path must be a list of strings")
+                message_id = self._resolve_forward_path(message_id)
             elif message_id not in self.messages:
                 raise ValueError(f"Message {message_id} does not exist")
             self.current_id = message_id
@@ -127,13 +148,9 @@ class Chat:
             "current_branch": self.current_branch
         }
         with open(self.remote, 'w') as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f)
 
-    @property
-    def current_message(self) -> Message:
-        return self.messages[self.current_id]
-
-    def __getitem__(self, key: str | int | slice) -> Message | list[Message]:
+    def __getitem__(self, key: str | int | list[str] | slice) -> Message | list[Message]:
         # Handle string indices (commit IDs)
         if isinstance(key, str):
             if key not in self.messages:
@@ -146,16 +163,33 @@ class Chat:
                 raise ValueError("Positive integer indices not supported")
             return self.messages[self._resolve_negative_index(key)]
             
+        # Handle forward traversal via branch path
+        if isinstance(key, list):
+            if not all(isinstance(k, str) for k in key):
+                raise TypeError("Branch path must be a list of strings")
+            return self.messages[self._resolve_forward_path(key)]
+            
         # Handle slices
         if isinstance(key, slice):
             if key.step is not None:
                 raise ValueError("Step is not supported in slicing")
                 
-            # Convert start/stop to message IDs if they're negative integers
-            start_id = (self._resolve_negative_index(key.start) 
-                       if isinstance(key.start, int) else key.start)
-            stop_id = (self._resolve_negative_index(key.stop) 
-                      if isinstance(key.stop, int) else key.stop)
+            # Convert start/stop to message IDs
+            start_id = None
+            if isinstance(key.start, int):
+                start_id = self._resolve_negative_index(key.start)
+            elif isinstance(key.start, list):
+                start_id = self._resolve_forward_path(key.start)
+            else:
+                start_id = key.start
+                
+            stop_id = None
+            if isinstance(key.stop, int):
+                stop_id = self._resolve_negative_index(key.stop)
+            elif isinstance(key.stop, list):
+                stop_id = self._resolve_forward_path(key.stop)
+            else:
+                stop_id = key.stop
             
             # Walk up from stop_id to start_id
             result = []
@@ -175,6 +209,7 @@ class Chat:
             return result
             
         raise TypeError(f"Invalid key type: {type(key)}")
+
 
     @classmethod
     def clone(cls, remote: str) -> 'Chat':
