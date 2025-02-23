@@ -63,16 +63,36 @@ class Chat:
         self.current_id = new_id
 
         return new_message.message["content"]
-        
+
     def branch(self, branch_name: str) -> None:
         if branch_name in self.messages[self.current_id].children:
             raise ValueError(f"Branch {branch_name} already exists at this point")
         
         self.messages[self.current_id].children[branch_name] = None
 
-    def checkout(self, message_id: Optional[str] = None, branch_name: Optional[str] = None) -> None:
+    def _resolve_negative_index(self, index: int) -> str:
+        """Convert negative index to message ID by walking up the tree"""
+        if index >= 0:
+            raise ValueError("This method only handles negative indices")
+            
+        current = self.current_id
+        steps = -index - 1  # -1 -> 0 steps, -2 -> 1 step, etc.
+        
+        for _ in range(steps):
+            current_msg = self.messages[current]
+            if current_msg.parent_id is None:
+                raise IndexError("Chat history is not deep enough")
+            current = current_msg.parent_id
+            
+        return current
+
+    def checkout(self, message_id: Optional[str | int] = None, branch_name: Optional[str] = None) -> None:
         if message_id is not None:
-            if message_id not in self.messages:
+            if isinstance(message_id, int):
+                if message_id >= 0:
+                    raise ValueError("Positive integer indices not supported")
+                message_id = self._resolve_negative_index(message_id)
+            elif message_id not in self.messages:
                 raise ValueError(f"Message {message_id} does not exist")
             self.current_id = message_id
             
@@ -107,7 +127,54 @@ class Chat:
             "current_branch": self.current_branch
         }
         with open(self.remote, 'w') as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=4)
+
+    @property
+    def current_message(self) -> Message:
+        return self.messages[self.current_id]
+
+    def __getitem__(self, key: str | int | slice) -> Message | list[Message]:
+        # Handle string indices (commit IDs)
+        if isinstance(key, str):
+            if key not in self.messages:
+                raise KeyError(f"Message {key} does not exist")
+            return self.messages[key]
+            
+        # Handle negative integer indices
+        if isinstance(key, int):
+            if key >= 0:
+                raise ValueError("Positive integer indices not supported")
+            return self.messages[self._resolve_negative_index(key)]
+            
+        # Handle slices
+        if isinstance(key, slice):
+            if key.step is not None:
+                raise ValueError("Step is not supported in slicing")
+                
+            # Convert start/stop to message IDs if they're negative integers
+            start_id = (self._resolve_negative_index(key.start) 
+                       if isinstance(key.start, int) else key.start)
+            stop_id = (self._resolve_negative_index(key.stop) 
+                      if isinstance(key.stop, int) else key.stop)
+            
+            # Walk up from stop_id to start_id
+            result = []
+            current = stop_id if stop_id is not None else self.current_id
+            
+            while True:
+                if current is None:
+                    raise IndexError("Reached root before finding start")
+                    
+                result.append(self.messages[current])
+                
+                if current == start_id:
+                    break
+                    
+                current = self.messages[current].parent_id
+                
+            return result
+            
+        raise TypeError(f"Invalid key type: {type(key)}")
 
     @classmethod
     def clone(cls, remote: str) -> 'Chat':
