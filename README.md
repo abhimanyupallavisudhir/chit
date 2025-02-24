@@ -1,6 +1,6 @@
 # chit
 
-`chit` is a git-analogous system for managing LLM chat conversations in a Jupyter notebook.
+`chit` is a git-analogous system for managing LLM chat conversations in a Jupyter notebook. Install as `pip install chitgpt`.
 
 The `chit.Chat` class has methods:
 
