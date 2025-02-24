@@ -32,10 +32,17 @@ class Chat:
         
         self.current_id = initial_id
         self.current_branch = "master"
+        # Track latest message for each branch
+        # maps each branch name to the latest message that includes
+        # that branch in its children attribute's keys
+        self.branch_tips: Dict[str, str] = {"master": initial_id}
 
     def commit(self, role: str = "user", message: str | None = None) -> str:
         if role == "user" and message is None:
             raise ValueError("User messages must provide content")
+        
+        if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
+            raise ValueError("Cannot commit two messages with the same role in a row")
         
         new_id = str(uuid.uuid4())
         
@@ -59,17 +66,25 @@ class Chat:
         
         # Add to messages dict
         self.messages[new_id] = new_message
-        
+
+        # Update branch tip
+        self.branch_tips[self.current_branch] = new_id
+
         # Update checkout
         self.current_id = new_id
 
         return new_message.message["content"]
 
-    def branch(self, branch_name: str) -> None:
-        if branch_name in self.messages[self.current_id].children:
-            raise ValueError(f"Branch {branch_name} already exists at this point")
-        
+    def branch(self, branch_name: str, checkout: bool = False) -> None:
+        if branch_name in self.branch_tips:
+            raise ValueError(f"Branch '{branch_name}' already exists (latest at message {self.branch_tips[branch_name]})")
+                
         self.messages[self.current_id].children[branch_name] = None
+        self.branch_tips[branch_name] = self.current_id
+        if checkout:
+            old_id = self.current_id
+            self.checkout(branch_name=branch_name)
+            assert self.current_id == old_id # since we just created the branch, it should be the same as before
 
     def _resolve_forward_path(self, branch_path: list[str], start_id: Optional[str] = None) -> str:
         """Follow a path of branches forward from start_id (or current_id if None)"""
@@ -139,8 +154,10 @@ class Chat:
             self.current_id = message_id
             
         if branch_name is not None:
-            if branch_name not in self.messages[self.current_id].children:
-                raise ValueError(f"Branch {branch_name} does not exist at message {self.current_id}")
+            if branch_name not in self.branch_tips:
+                raise ValueError(f"Branch '{branch_name}' does not exist")
+            # Always checkout to the latest message containing this branch
+            self.current_id = self.branch_tips[branch_name]
             self.current_branch = branch_name
         else:
             self.current_branch = self.messages[self.current_id].home_branch
