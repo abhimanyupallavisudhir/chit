@@ -479,19 +479,35 @@ class Chat:
                 return messages;
             }}
 
+            function getCompleteMessageChain(startId) {{
+                let messages = getMessagesFromRoot(startId);
+                
+                // Now follow home_branches forward
+                let currentMsg = messages[messages.length - 1];
+                while (currentMsg) {{
+                    // Get the next message following home_branch
+                    const children = currentMsg.children;
+                    const homeBranch = currentMsg.home_branch;
+                    const nextId = children[homeBranch];
+                    
+                    if (!nextId) break;  // Stop if no child on home_branch
+                    
+                    currentMsg = chatData.messages[nextId];
+                    messages.push(currentMsg);
+                }}
+                
+                return messages;
+            }}
+
             function onBranchSelect(messageId, selectedBranch) {{
                 console.log('Branch selected:', messageId, selectedBranch);
                 
-                // Get messages up to this point
                 const msg = chatData.messages[messageId];
                 const childId = msg.children[selectedBranch];
                 
-                if (!childId) {{
-                    console.log('No child found for branch:', selectedBranch);
-                    return;
-                }}
+                if (!childId) return;
                 
-                // Update current ID and re-render from root
+                // Get complete chain including all home_branch children
                 chatData.current_id = childId;
                 renderMessages();
             }}
@@ -502,7 +518,7 @@ class Chat:
                 const container = document.getElementById('chat-container');
                 container.innerHTML = '';
                 
-                const messages = getMessagesFromRoot(chatData.current_id);
+                const messages = getCompleteMessageChain(chatData.current_id);
                 console.log('Messages to render:', messages.map(m => m.id));
                 
                 messages.forEach(msg => {{
