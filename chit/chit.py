@@ -287,6 +287,64 @@ class Chat:
         chat.branch_tips = data["branch_tips"]
         return chat
 
+    def rm(self, branch_name: str) -> None:
+        """Remove all messages associated with a branch."""
+        # Check if we're trying to remove current branch or home branch
+        if (branch_name == self.current_branch or 
+            branch_name == self.messages[self.current_id].home_branch):
+            raise ValueError("KalidasaError: attempted to remove the currently checked out branch or the home branch of the currently checked out message")
+
+        # First pass: identify messages to delete and clean up their parent references
+        to_delete = set()
+        parent_cleanups = []  # List of (parent_id, msg_id) tuples to clean up
+        
+        for msg_id, msg in self.messages.items():
+            if msg.home_branch == branch_name:
+                to_delete.add(msg_id)
+                if msg.parent_id is not None:
+                    parent_cleanups.append((msg.parent_id, msg_id))
+
+        # Clean up parent references
+        for parent_id, msg_id in parent_cleanups:
+            if parent_id in self.messages:  # Check parent still exists
+                parent = self.messages[parent_id]
+                # Find and remove this message from any branch in parent's children
+                for branch, child_id in list(parent.children.items()):  # Create list copy to modify during iteration
+                    if child_id == msg_id:
+                        parent.children[branch] = None
+
+        # Finally delete the messages
+        for msg_id in to_delete:
+            if msg_id in self.messages:  # Check message still exists
+                del self.messages[msg_id]
+
+        # Remove from branch_tips if present
+        if branch_name in self.branch_tips:
+            del self.branch_tips[branch_name]
+
+    def mv(self, branch_name_old: str, branch_name_new: str) -> None:
+        """Rename a branch throughout the tree."""
+        if branch_name_new in self.branch_tips:
+            raise ValueError(f"Branch '{branch_name_new}' already exists")
+
+        # Update all references to the branch
+        for msg in self.messages.values():
+            # Update children dict keys
+            if branch_name_old in msg.children:
+                msg.children[branch_name_new] = msg.children.pop(branch_name_old)
+
+            # Update home_branch
+            if msg.home_branch == branch_name_old:
+                msg.home_branch = branch_name_new
+
+        # Update branch_tips
+        if branch_name_old in self.branch_tips:
+            self.branch_tips[branch_name_new] = self.branch_tips.pop(branch_name_old)
+
+        # Update current_branch if needed
+        if self.current_branch == branch_name_old:
+            self.current_branch = branch_name_new
+
     def find(self, 
              pattern: str | Pattern,
              *,

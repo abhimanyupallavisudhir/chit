@@ -10,6 +10,8 @@ The `chit.Chat` class has methods:
 - `push()` for dumping data to a json file we call the `remote`
 - `clone()` a classmethod for initializing a `chit.Chat` object from a json file
 - sensible indexing and slicing
+- `rm()` for removing a branch
+- `mv()` for moving a branch
 - `find()` for finding in conversation history
 
 We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions. Vision is supported, including images from the clipboard like so: `chat.commit("user", "Analyze this image.", image_path = 'CB')`.
