@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 import uuid
 import json
-from litellm import completion
+from litellm import completion, stream_chunk_builder
 
 @dataclass
 class Message:
@@ -49,7 +49,12 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            response = completion(model=self.model, messages=history)
+            _response = completion(model=self.model, messages=history, stream=True)
+            chunks = []
+            for chunk in _response:
+                print(chunk.choices[0].delta.content or "", end="")
+                chunks.append(chunk)
+            response = stream_chunk_builder(chunks, messages=history)
             message = response.choices[0].message.content
         
         # Create new message
