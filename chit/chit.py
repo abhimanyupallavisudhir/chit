@@ -595,13 +595,13 @@ class Chat:
                                 .join('');
                             
                             branchHtml = `
-                                <select onchange="onBranchSelect('${{msg.id}}', this.value)">
+                                <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
+                                        ${{branches.length === 1 ? 'disabled' : ''}}>
                                     ${{options}}
                                 </select>
                             `;
                         }}
-                    }}
-                    
+                    }}                    
                     div.innerHTML = `
                         <div class="message-header">
                             <span>${{msg.message.role}}</span>
