@@ -206,7 +206,7 @@ class Chat:
                     
                 current = self.messages[current].parent_id
                 
-            return result
+            return result[::-1]
             
         raise TypeError(f"Invalid key type: {type(key)}")
 
