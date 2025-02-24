@@ -194,10 +194,13 @@ class Chat:
             "model": self.model,
             "messages": {k: vars(v) for k, v in self.messages.items()},
             "current_id": self.current_id,
-            "current_branch": self.current_branch
+            "current_branch": self.current_branch,
+            "root_id": self.root_id,
+            "branch_tips": self.branch_tips
         }
         with open(self.remote, 'w') as f:
             json.dump(data, f)
+
 
     def __getitem__(self, key: str | int | list[str] | slice) -> Message | list[Message]:
         # Handle string indices (commit IDs)
@@ -266,7 +269,6 @@ class Chat:
         raise TypeError(f"Invalid key type: {type(key)}")
 
 
-
     @classmethod
     def clone(cls, remote: str) -> 'Chat':
         """Create new Chat instance from remote file"""
@@ -278,4 +280,6 @@ class Chat:
         chat.messages = {k: Message(**v) for k, v in data["messages"].items()}
         chat.current_id = data["current_id"]
         chat.current_branch = data["current_branch"]
+        chat.root_id = data["root_id"]
+        chat.branch_tips = data["branch_tips"]
         return chat
