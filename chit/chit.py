@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, Pattern
 from pathlib import Path
 import uuid
 import json
+import re
 from litellm import completion, stream_chunk_builder
 from chit.images import prepare_image_message
 
@@ -283,3 +284,70 @@ class Chat:
         chat.root_id = data["root_id"]
         chat.branch_tips = data["branch_tips"]
         return chat
+
+    def find(self, 
+             pattern: str | Pattern,
+             *,
+             case_sensitive: bool = False,
+             roles: Optional[list[str]] = None,
+             max_results: Optional[int] = None,
+             regex: bool = False,
+             context: int = 0  # Number of messages before/after to include
+             ) -> list[dict[str, Message | list[Message]]]:
+        """
+        Search for messages matching the pattern.
+        
+        Args:
+            pattern: String or compiled regex pattern to search for
+            case_sensitive: Whether to perform case-sensitive matching
+            roles: List of roles to search in ("user", "assistant", "system"). None means all roles.
+            max_results: Maximum number of results to return. None means return all matches.
+            regex: Whether to treat pattern as a regex (if string)
+            context: Number of messages before/after to include in results
+            
+        Returns:
+            List of dicts, each containing:
+                - 'match': Message that matched
+                - 'context': List of context messages (if context > 0)
+        """
+        if isinstance(pattern, str) and not regex:
+            pattern = re.escape(pattern)
+            
+        if isinstance(pattern, str):
+            flags = 0 if case_sensitive else re.IGNORECASE
+            pattern = re.compile(pattern, flags)
+            
+        results = []
+        
+        # Walk through messages in chronological order from root
+        current_id = self.root_id
+        message_sequence = []
+        
+        while current_id is not None:
+            message = self.messages[current_id]
+            message_sequence.append(message)
+            
+            # Check if message matches search criteria
+            if (roles is None or message.message["role"] in roles) and \
+               pattern.search(message.message["content"]):
+                
+                # Get context if requested
+                context_messages = []
+                if context > 0:
+                    start_idx = max(0, len(message_sequence) - context - 1)
+                    end_idx = min(len(message_sequence) + context, len(message_sequence))
+                    context_messages = message_sequence[start_idx:end_idx]
+                    context_messages.remove(message)  # Don't include the match itself in context
+                
+                results.append({
+                    'match': message,
+                    'context': context_messages
+                })
+                
+                if max_results and len(results) >= max_results:
+                    break
+            
+            # Move to next message on master branch
+            current_id = message.children.get("master")
+            
+        return results
