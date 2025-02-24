@@ -43,6 +43,11 @@ class Chat:
         self.branch_tips: Dict[str, str] = {"master": initial_id}
 
     def commit(self, role: str = "user", message: str | None = None, image_path: str | Path | None = None) -> str:
+        # check that checked-out message does not already have a child in the checked-out branch
+        existing_child_id = self.messages[self.current_id].children[self.current_branch]
+        if existing_child_id is not None:
+            raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}")
+        
         if role == "user" and message is None and image_path is None:
             raise ValueError("User messages must provide content")
         
