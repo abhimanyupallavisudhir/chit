@@ -17,7 +17,8 @@ class Chat:
         self.model = model
         self.remote = None
         initial_id = str(uuid.uuid4())
-        
+        self.root_id = initial_id  # Store the root message ID
+
         # Initialize with system message
         self.messages: Dict[str, Message] = {
             initial_id: Message(
@@ -103,12 +104,32 @@ class Chat:
             
         return current
 
+    def _resolve_positive_index(self, index: int) -> str:
+        """Convert positive index to message ID by following master branch from root"""
+        if index < 0:
+            raise ValueError("This method only handles non-negative indices")
+            
+        current = self.root_id
+        steps = index  # 0 -> root, 1 -> first message, etc.
+        
+        for _ in range(steps):
+            current_msg = self.messages[current]
+            if "master" not in current_msg.children:
+                raise IndexError("Chat history not long enough (no master branch)")
+            next_id = current_msg.children["master"]
+            if next_id is None:
+                raise IndexError("Chat history not long enough (branch ends)")
+            current = next_id
+            
+        return current
+
     def checkout(self, message_id: Optional[str | int | list[str]] = None, branch_name: Optional[str] = None) -> None:
         if message_id is not None:
             if isinstance(message_id, int):
                 if message_id >= 0:
-                    raise ValueError("Positive integer indices not supported")
-                message_id = self._resolve_negative_index(message_id)
+                    message_id = self._resolve_positive_index(message_id)
+                else:
+                    message_id = self._resolve_negative_index(message_id)
             elif isinstance(message_id, list):
                 if not all(isinstance(k, str) for k in message_id):
                     raise TypeError("Branch path must be a list of strings")
@@ -157,10 +178,10 @@ class Chat:
                 raise KeyError(f"Message {key} does not exist")
             return self.messages[key]
             
-        # Handle negative integer indices
+        # Handle integer indices
         if isinstance(key, int):
             if key >= 0:
-                raise ValueError("Positive integer indices not supported")
+                return self.messages[self._resolve_positive_index(key)]
             return self.messages[self._resolve_negative_index(key)]
             
         # Handle forward traversal via branch path
@@ -177,7 +198,10 @@ class Chat:
             # Convert start/stop to message IDs
             start_id = None
             if isinstance(key.start, int):
-                start_id = self._resolve_negative_index(key.start)
+                if key.start >= 0:
+                    start_id = self._resolve_positive_index(key.start)
+                else:
+                    start_id = self._resolve_negative_index(key.start)
             elif isinstance(key.start, list):
                 start_id = self._resolve_forward_path(key.start)
             else:
@@ -185,7 +209,10 @@ class Chat:
                 
             stop_id = None
             if isinstance(key.stop, int):
-                stop_id = self._resolve_negative_index(key.stop)
+                if key.stop >= 0:
+                    stop_id = self._resolve_positive_index(key.stop)
+                else:
+                    stop_id = self._resolve_negative_index(key.stop)
             elif isinstance(key.stop, list):
                 stop_id = self._resolve_forward_path(key.stop)
             else:
@@ -206,9 +233,10 @@ class Chat:
                     
                 current = self.messages[current].parent_id
                 
-            return result[::-1]
+            return result[::-1]  # Reverse to get chronological order
             
         raise TypeError(f"Invalid key type: {type(key)}")
+
 
 
     @classmethod
