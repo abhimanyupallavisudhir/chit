@@ -1,5 +1,7 @@
+import tempfile
+import webbrowser
 from dataclasses import dataclass
-from typing import Dict, Optional, Pattern
+from typing import Dict, Optional, Pattern, Any
 from pathlib import Path
 import uuid
 import json
@@ -351,3 +353,214 @@ class Chat:
             current_id = message.children.get("master")
             
         return results
+    
+    def viz(self) -> None:
+        """Create and open an interactive visualization of the chat tree."""
+        # Create temporary HTML file
+        with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
+            f.write(self._generate_viz_html())
+            temp_path = f.name
+        
+        # Open in browser
+        webbrowser.open(f'file://{temp_path}')
+    
+    def _prepare_messages_for_viz(self) -> Dict[str, Any]:
+        """Convert messages to a format suitable for visualization."""
+        return {
+            'messages': {k: {
+                'id': m.id,
+                'message': m.message,
+                'children': m.children,
+                'parent_id': m.parent_id,
+                'home_branch': m.home_branch
+            } for k, m in self.messages.items()},
+            'current_id': self.current_id,
+            'root_id': self.root_id
+        }
+    
+    def _generate_viz_html(self) -> str:
+        """Generate the HTML for visualization."""
+        data = self._prepare_messages_for_viz()
+        
+        return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Visualization</title>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {{
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }}
+        .message {{
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .message.system {{ background: #f0f0f0; }}
+        .message.user {{ background: #f0f7ff; }}
+        .message.assistant {{ background: white; }}
+        .message-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }}
+        select {{
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }}
+        .thumbnail {{
+            max-width: 200px;
+            max-height: 200px;
+            cursor: pointer;
+            margin: 10px 0;
+        }}
+        .current {{ border-left: 4px solid #007bff; }}
+        pre {{
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }}
+        code {{
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }}
+    </style>
+</head>
+<body>
+    <div id="chat-container"></div>
+
+    <script>
+        // Chat data
+        const chatData = {json.dumps(data)};
+        
+        // Initialize marked with options
+        marked.setOptions({{
+            breaks: true,
+            gfm: true,
+            highlight: function(code) {{
+                return code;
+            }}
+        }});
+
+        function renderContent(content) {{
+            if (typeof content === 'string') {{
+                return marked.parse(content);
+            }}
+            
+            let html = '';
+            for (const item of content) {{
+                if (item.type === 'text') {{
+                    html += marked.parse(item.text);
+                }} else if (item.type === 'image_url') {{
+                    const url = item.image_url.url;
+                    html += `
+                        <img src="${{url}}" 
+                             class="thumbnail" 
+                             onclick="window.open(this.src, '_blank')"
+                             alt="Click to view full size">
+                    `;
+                }}
+            }}
+            return html;
+        }}
+
+        function getBranchPath(messageId) {{
+            const paths = new Map();
+            const queue = [[messageId, []]];
+            
+            while (queue.length > 0) {{
+                const [currId, path] = queue.shift();
+                if (paths.has(currId)) continue;
+                
+                paths.set(currId, path);
+                const msg = chatData.messages[currId];
+                
+                if (msg.children) {{
+                    for (const [branch, childId] of Object.entries(msg.children)) {{
+                        if (childId) {{
+                            queue.push([childId, [...path, [currId, branch]]]);
+                        }}
+                    }}
+                }}
+            }}
+            
+            return paths;
+        }}
+
+        function renderMessages() {{
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '';
+            
+            // Get path from root to current
+            let messages = [];
+            let currentId = chatData.current_id;
+            
+            while (currentId) {{
+                messages.unshift(chatData.messages[currentId]);
+                currentId = chatData.messages[currentId].parent_id;
+            }}
+            
+            // Render each message
+            messages.forEach(msg => {{
+                const div = document.createElement('div');
+                div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
+                
+                const branchSelect = document.createElement('select');
+                if (msg.children && Object.keys(msg.children).length > 0) {{
+                    Object.entries(msg.children).forEach(([branch, childId]) => {{
+                        const option = document.createElement('option');
+                        option.value = branch;
+                        option.text = branch;
+                        option.selected = branch === msg.home_branch;
+                        branchSelect.appendChild(option);
+                    }});
+                    
+                    branchSelect.onchange = (e) => {{
+                        const paths = getBranchPath(msg.id);
+                        const selectedBranch = e.target.value;
+                        const childId = msg.children[selectedBranch];
+                        if (childId) {{
+                            chatData.current_id = childId;
+                            renderMessages();
+                            MathJax.typeset();
+                        }}
+                    }};
+                }}
+                
+                div.innerHTML = `
+                    <div class="message-header">
+                        <span>${{msg.message.role}}</span>
+                        ${{branchSelect.outerHTML}}
+                    </div>
+                    <div class="message-content">
+                        ${{renderContent(msg.message.content)}}
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            }});
+        }}
+
+        // Initial render
+        renderMessages();
+        MathJax.typeset();
+    </script>
+</body>
+</html>
+"""
