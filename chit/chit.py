@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, Optional
+from pathlib import Path
 import uuid
 import json
 from litellm import completion, stream_chunk_builder
+from chit.images import prepare_image_message
 
 @dataclass
 class Message:
@@ -37,15 +39,19 @@ class Chat:
         # that branch in its children attribute's keys
         self.branch_tips: Dict[str, str] = {"master": initial_id}
 
-    def commit(self, role: str = "user", message: str | None = None) -> str:
-        if role == "user" and message is None:
+    def commit(self, role: str = "user", message: str | None = None, image_path: str | Path | None = None) -> str:
+        if role == "user" and message is None and image_path is None:
             raise ValueError("User messages must provide content")
         
         if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
             raise ValueError("Cannot commit two messages with the same role in a row")
         
         new_id = str(uuid.uuid4())
-        
+
+        if image_path is not None:
+            assert role == "user", "Only user messages can include images"
+            message = prepare_image_message(message, image_path)
+
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
@@ -56,7 +62,7 @@ class Chat:
                 chunks.append(chunk)
             response = stream_chunk_builder(chunks, messages=history)
             message = response.choices[0].message.content
-        
+
         # Create new message
         new_message = Message(
             id=new_id,
@@ -78,7 +84,7 @@ class Chat:
         # Update checkout
         self.current_id = new_id
 
-        return new_message.message["content"]
+        # return new_message.message["content"]
 
     def branch(self, branch_name: str, checkout: bool = False) -> None:
         if branch_name in self.branch_tips:
