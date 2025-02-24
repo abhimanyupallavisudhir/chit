@@ -412,15 +412,31 @@ class Chat:
             
         return results
     
-    def viz(self) -> None:
-        """Create and open an interactive visualization of the chat tree."""
-        # Create temporary HTML file
-        with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
-            f.write(self._generate_viz_html())
-            temp_path = f.name
+    def viz(self, file_path: Optional[str | Path] = None) -> None:
+        """
+        Create and open an interactive visualization of the chat tree.
         
-        # Open in browser
-        webbrowser.open(f'file://{temp_path}')
+        Args:
+            file_path: Optional path where the HTML file should be saved.
+                    If None, creates a temporary file instead.
+        """
+        html_content = self._generate_viz_html()
+        
+        if file_path is not None:
+            # Convert to Path object if string
+            path = Path(file_path)
+            # Create parent directories if they don't exist
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Write the file
+            path.write_text(html_content)
+            # Open in browser
+            webbrowser.open(f'file://{path.absolute()}')
+        else:
+            # Original temporary file behavior
+            with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
+                f.write(html_content)
+                temp_path = f.name
+            webbrowser.open(f'file://{temp_path}')
     
     def _prepare_messages_for_viz(self) -> Dict[str, Any]:
         """Convert messages to a format suitable for visualization."""
