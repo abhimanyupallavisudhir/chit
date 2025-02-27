@@ -416,7 +416,115 @@ class Chat:
             current_id = message.children.get("master")
             
         return results
-    
+
+    @property
+    def log(self) -> str:
+        """
+        Generate a tree visualization of the commit history.
+        """
+        # Build adjacency list (parent -> children)
+        parent_to_children = {}
+        for msg_id, msg in self.messages.items():
+            for branch, child_id in msg.children.items():
+                if child_id is not None:
+                    if msg_id not in parent_to_children:
+                        parent_to_children[msg_id] = []
+                    parent_to_children[msg_id].append((branch, child_id))
+        
+        # Build adjacency list (child -> parent)
+        child_to_parent = {msg.id: msg.parent_id for msg in self.messages.values()}
+        
+        # Get main chain (master branch from root)
+        main_chain = []
+        current = self.root_id
+        while current is not None:
+            main_chain.append(current)
+            # Find master branch child
+            master_child = None
+            for branch, child in parent_to_children.get(current, []):
+                if branch == "master":
+                    master_child = child
+                    break
+            current = master_child
+        
+        # Output lines
+        lines = []
+        
+        # Helper function to format a commit ID with branch and current indicators
+        def format_commit(commit_id):
+            short_id = commit_id[:6]
+            branch_indicators = []
+            for branch, tip_id in self.branch_tips.items():
+                if tip_id == commit_id:
+                    branch_indicators.append(branch)
+            
+            suffix = ""
+            if branch_indicators:
+                suffix += f" ({', '.join(branch_indicators)})"
+            if commit_id == self.current_id:
+                suffix += " *"
+            return short_id + suffix
+        
+        # Print the main chain first
+        main_line = ""
+        for i, commit in enumerate(main_chain):
+            if i > 0:
+                main_line += "──"
+            main_line += format_commit(commit)
+        lines.append(main_line)
+        
+        # Function to print a branch
+        def print_branch(parent_id, branch_name, indent, visited=None):
+            if visited is None:
+                visited = set()
+            
+            # Find the commit
+            child_id = None
+            for b, c in parent_to_children.get(parent_id, []):
+                if b == branch_name:
+                    child_id = c
+                    break
+            
+            if child_id is None or child_id in visited:
+                return
+            
+            visited.add(child_id)
+            
+            # Print the commit
+            branch_line = indent + "└─" + format_commit(child_id)
+            lines.append(branch_line)
+            
+            # Print master branch children
+            master_child = None
+            for b, c in parent_to_children.get(child_id, []):
+                if b == "master":
+                    master_child = c
+                    break
+            
+            if master_child and master_child not in visited:
+                visited.add(master_child)
+                master_line = indent + "  └─" + format_commit(master_child)
+                lines.append(master_line)
+                
+                # Handle children of the master branch
+                for b, c in parent_to_children.get(child_id, []):
+                    if b != "master":
+                        print_branch(child_id, b, indent + "    ", visited)
+            
+            # Print other branches
+            for b, c in parent_to_children.get(child_id, []):
+                if b != "master":
+                    print_branch(child_id, b, indent + "  ", visited)
+        
+        # Print branches from the main chain
+        for commit in main_chain:
+            indent = " " * (len(format_commit(commit)))
+            for branch, child in parent_to_children.get(commit, []):
+                if branch != "master":
+                    print_branch(commit, branch, indent, set())
+        
+        return "\n".join(lines)
+
     def viz(self, file_path: Optional[str | Path] = None) -> None:
         """
         Create and open an interactive visualization of the chat tree.
