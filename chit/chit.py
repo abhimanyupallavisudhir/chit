@@ -17,6 +17,10 @@ class Message:
     parent_id: Optional[str]
     home_branch: str
 
+    @property
+    def heir_id(self):
+        return self.children[self.home_branch]
+
 class Chat:
     def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
         self.model = model
@@ -417,117 +421,86 @@ class Chat:
             
         return results
 
-    def log(self, truncate_ids: bool = True) -> None:
+    def log(self) -> str:
         """
-        Prints a tree visualization of the commit history
-        Args:
-            truncate_ids: If True, show shortened commit IDs (first 6 chars)
+        Generate a tree visualization of the conversation history, like this:
+
+        001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
+                      ├─bb2b2b──adaf938 (features)
+                      |       └─f2f2f2*──aa837r (design_discussion)
+                      |                        ├ (figma_help)
+                      |                        └ (tree_viz_help*)
+                      └─r228df──f2f2f2 (publishing)
+                              └─j38392──b16327 (pypi)
+
         """
-        # Helper function to get shortened ID
-        def short_id(id_str):
-            return id_str[:6] if truncate_ids and id_str else id_str
-            
-        # Track visited nodes to avoid cycles
-        visited = set()
-        
-        # Track branch paths
-        def draw_tree(current_id, prefix="", is_last=True, branch_paths=None):
-            if current_id is None or current_id in visited:
-                return
-                
-            if branch_paths is None:
-                branch_paths = {}
-                
-            visited.add(current_id)
-            node = self.messages[current_id]
-            
-            # Prepare display for current node
-            current_str = short_id(current_id)
-            
-            # Add role indicator
-            role = node.message.get("role", "")
-            if role:
-                current_str += f"[{role[0]}]"
-            
-            # Mark current checkout
-            if current_id == self.current_id:
-                current_str += "*"
-                
-            # Add branch labels for branch tips
-            branch_labels = []
-            for branch, tip_id in self.branch_tips.items():
-                if tip_id == current_id:
-                    if branch == self.current_branch and current_id == self.current_id:
-                        branch_labels.append(f"{branch}*")
-                    else:
-                        branch_labels.append(branch)
-                        
-            if branch_labels:
-                current_str += f" ({', '.join(branch_labels)})"
-                
-            # Print current node
-            if current_id == self.root_id:
-                print(current_str, end="")
-            else:
-                print(f"──{current_str}", end="")
-                
-            # Get all children
-            children = [(branch, child_id) for branch, child_id in node.children.items() if child_id is not None]
-            
-            # Add placeholder entries for branches with no commits yet
-            empty_branches = [(branch, None) for branch, child_id in node.children.items() if child_id is None]
-            children.extend(empty_branches)
-            
-            # Find primary branch (home branch of the node or master)
-            primary_branch = node.home_branch
-            
-            # Separate primary branch from other branches
-            primary_child = None
-            other_children = []
-            
-            for branch, child_id in children:
-                if branch == primary_branch:
-                    primary_child = (branch, child_id)
+        def _process_commit_id(commit_id: str):
+            commit = self.messages[commit_id]
+            commit_id_proc = commit_id[:6]
+            commit_id_proc = f'[{commit.message["role"][0]}]' + commit_id_proc
+            if commit_id == self.current_id:
+                commit_id_proc += '*'
+            return commit_id_proc
+
+        def draw_from(frontier_id: str, branch_name: str) -> list[str]:
+            log_lines: list[str] = []
+            log_lines.append(_process_commit_id(frontier_id))
+            frontier: Message = self.messages[frontier_id]
+
+            horizontal_pos: int = len(log_lines[0]) # position where stuff should be added
+
+            if hasattr(frontier, "heir_id"):
+                log_lines[0] += '──'
+                if frontier.heir_id is None:
+                    log_lines[0] += f' ({branch_name})'
                 else:
-                    other_children.append((branch, child_id))
+                    subtree: list[str] = draw_from(frontier.heir_id, frontier.home_branch)
+                    # we would like to just append subtree to the current log
+                    # but it's actually multiple lines that need to get appended 
+                    # to the right propositions
+                    indent: int = len(log_lines[0])
+                    log_lines[0] += subtree[0]
+                    for subtree_line in subtree[1:]:
+                        log_lines.append(' ' * indent + subtree_line)
+
+            for child_branch, child_id in frontier.children.items():
+                if child_branch == frontier.home_branch:
+                    # already processed the heir
+                    continue
+                else:
                     
-            # If node has children
-            if children:
-                # Process primary branch first
-                if primary_child:
-                    # Continue on same line for primary branch
-                    print("", end="")
-                    draw_tree(primary_child[1], prefix, not other_children, branch_paths)
-                
-                # Process other branches
-                if other_children:
-                    print()  # Line break before starting other branches
-                    
-                    # Update branch paths with new prefixes
-                    for i, (branch, child_id) in enumerate(other_children):
-                        is_last_branch = (i == len(other_children) - 1)
-                        
-                        # Determine connector and new prefix
-                        connector = "└" if is_last_branch else "├"
-                        new_prefix = prefix + ("  " if is_last else "│ ")
-                        
-                        # Print branch connector
-                        print(f"{prefix}{connector}", end="")
-                        
-                        # Draw child
-                        child_label = f"{branch}: " if branch != node.home_branch else ""
-                        if child_id is not None:
-                            draw_tree(child_id, new_prefix, is_last_branch, branch_paths)
-                        else:
-                            # Empty branch with no commit yet
-                            print(f"── ({branch})", end="")
-            else:
-                print()  # End the line if no children
+                    subtree: list[str] = draw_from(child_id, child_branch)
+                    for i in range(len(log_lines)):
+                        if i == 0:
+                            continue
+                        line = log_lines[i]
+                        if line[horizontal_pos] == '└': # no longer the final branch
+                            line = line[:horizontal_pos] + '├' + line[horizontal_pos+1:]
+                        if line[horizontal_pos] == ' ': # extend
+                            line = line[:horizontal_pos] + '│' + line[horizontal_pos+1:]
+                        log_lines[i] = line
+                    log_lines.append(' ' * horizontal_pos + '└')
+                    indent: int = horizontal_pos + 1 # the length of log_lines[-1]
+                    log_lines[-1] += subtree[0]
+                    for subtree_line in subtree[1:]:
+                        log_lines.append(' ' * indent + subtree_line)
+            
+            if not frontier.children:
+                log_lines[0] += f' ({branch_name})'
+            return log_lines
         
-        # Start drawing from root
-        print("\nCommit Tree:")
-        draw_tree(self.root_id)
-        print("\n")
+        log_lines: list[str] = draw_from(self.root_id, 'master')
+        return '\n'.join(log_lines)
+
+
+                        
+
+
+
+
+        
+
+
 
     def viz(self, file_path: Optional[str | Path] = None) -> None:
         """
