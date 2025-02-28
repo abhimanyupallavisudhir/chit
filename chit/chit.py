@@ -417,113 +417,112 @@ class Chat:
             
         return results
 
-    @property
-    def log(self) -> str:
+    def log(self, truncate_ids: bool = True) -> None:
         """
-        Generate a tree visualization of the commit history.
+        Prints a tree visualization of the commit history
+        Args:
+            truncate_ids: If True, show shortened commit IDs (first 6 chars)
         """
-        # Build adjacency list (parent -> children)
-        parent_to_children = {}
-        for msg_id, msg in self.messages.items():
-            for branch, child_id in msg.children.items():
-                if child_id is not None:
-                    if msg_id not in parent_to_children:
-                        parent_to_children[msg_id] = []
-                    parent_to_children[msg_id].append((branch, child_id))
-        
-        # Build adjacency list (child -> parent)
-        child_to_parent = {msg.id: msg.parent_id for msg in self.messages.values()}
-        
-        # Get main chain (master branch from root)
-        main_chain = []
-        current = self.root_id
-        while current is not None:
-            main_chain.append(current)
-            # Find master branch child
-            master_child = None
-            for branch, child in parent_to_children.get(current, []):
-                if branch == "master":
-                    master_child = child
-                    break
-            current = master_child
-        
-        # Output lines
-        lines = []
-        
-        # Helper function to format a commit ID with branch and current indicators
-        def format_commit(commit_id):
-            short_id = commit_id[:6]
-            branch_indicators = []
-            for branch, tip_id in self.branch_tips.items():
-                if tip_id == commit_id:
-                    branch_indicators.append(branch)
+        # Helper function to get shortened ID
+        def short_id(id_str):
+            return id_str[:6] if truncate_ids and id_str else id_str
             
-            suffix = ""
-            if branch_indicators:
-                suffix += f" ({', '.join(branch_indicators)})"
-            if commit_id == self.current_id:
-                suffix += " *"
-            return short_id + suffix
+        # Track visited nodes to avoid cycles
+        visited = set()
         
-        # Print the main chain first
-        main_line = ""
-        for i, commit in enumerate(main_chain):
-            if i > 0:
-                main_line += "──"
-            main_line += format_commit(commit)
-        lines.append(main_line)
-        
-        # Function to print a branch
-        def print_branch(parent_id, branch_name, indent, visited=None):
-            if visited is None:
-                visited = set()
-            
-            # Find the commit
-            child_id = None
-            for b, c in parent_to_children.get(parent_id, []):
-                if b == branch_name:
-                    child_id = c
-                    break
-            
-            if child_id is None or child_id in visited:
+        # Track branch paths
+        def draw_tree(current_id, prefix="", is_last=True, branch_paths=None):
+            if current_id is None or current_id in visited:
                 return
-            
-            visited.add(child_id)
-            
-            # Print the commit
-            branch_line = indent + "└─" + format_commit(child_id)
-            lines.append(branch_line)
-            
-            # Print master branch children
-            master_child = None
-            for b, c in parent_to_children.get(child_id, []):
-                if b == "master":
-                    master_child = c
-                    break
-            
-            if master_child and master_child not in visited:
-                visited.add(master_child)
-                master_line = indent + "  └─" + format_commit(master_child)
-                lines.append(master_line)
                 
-                # Handle children of the master branch
-                for b, c in parent_to_children.get(child_id, []):
-                    if b != "master":
-                        print_branch(child_id, b, indent + "    ", visited)
+            if branch_paths is None:
+                branch_paths = {}
+                
+            visited.add(current_id)
+            node = self.messages[current_id]
             
-            # Print other branches
-            for b, c in parent_to_children.get(child_id, []):
-                if b != "master":
-                    print_branch(child_id, b, indent + "  ", visited)
+            # Prepare display for current node
+            current_str = short_id(current_id)
+            
+            # Mark current checkout
+            if current_id == self.current_id:
+                current_str += "*"
+                
+            # Add branch labels for branch tips
+            branch_labels = []
+            for branch, tip_id in self.branch_tips.items():
+                if tip_id == current_id:
+                    if branch == self.current_branch and current_id == self.current_id:
+                        branch_labels.append(f"{branch}*")
+                    else:
+                        branch_labels.append(branch)
+                        
+            if branch_labels:
+                current_str += f" ({', '.join(branch_labels)})"
+                
+            # Print current node
+            if current_id == self.root_id:
+                print(current_str, end="")
+            else:
+                print(f"──{current_str}", end="")
+                
+            # Get all children
+            children = [(branch, child_id) for branch, child_id in node.children.items() if child_id is not None]
+            
+            # Add placeholder entries for branches with no commits yet
+            empty_branches = [(branch, None) for branch, child_id in node.children.items() if child_id is None]
+            children.extend(empty_branches)
+            
+            # Find primary branch (home branch of the node or master)
+            primary_branch = node.home_branch
+            
+            # Separate primary branch from other branches
+            primary_child = None
+            other_children = []
+            
+            for branch, child_id in children:
+                if branch == primary_branch:
+                    primary_child = (branch, child_id)
+                else:
+                    other_children.append((branch, child_id))
+                    
+            # If node has children
+            if children:
+                # Process primary branch first
+                if primary_child:
+                    # Continue on same line for primary branch
+                    print("", end="")
+                    draw_tree(primary_child[1], prefix, not other_children, branch_paths)
+                
+                # Process other branches
+                if other_children:
+                    print()  # Line break before starting other branches
+                    
+                    # Update branch paths with new prefixes
+                    for i, (branch, child_id) in enumerate(other_children):
+                        is_last_branch = (i == len(other_children) - 1)
+                        
+                        # Determine connector and new prefix
+                        connector = "└" if is_last_branch else "├"
+                        new_prefix = prefix + ("  " if is_last else "│ ")
+                        
+                        # Print branch connector
+                        print(f"{prefix}{connector}", end="")
+                        
+                        # Draw child
+                        child_label = f"{branch}: " if branch != node.home_branch else ""
+                        if child_id is not None:
+                            draw_tree(child_id, new_prefix, is_last_branch, branch_paths)
+                        else:
+                            # Empty branch with no commit yet
+                            print(f"── ({branch})", end="")
+            else:
+                print()  # End the line if no children
         
-        # Print branches from the main chain
-        for commit in main_chain:
-            indent = " " * (len(format_commit(commit)))
-            for branch, child in parent_to_children.get(commit, []):
-                if branch != "master":
-                    print_branch(commit, branch, indent, set())
-        
-        return "\n".join(lines)
+        # Start drawing from root
+        print("\nCommit Tree:")
+        draw_tree(self.root_id)
+        print("\n")
 
     def viz(self, file_path: Optional[str | Path] = None) -> None:
         """
