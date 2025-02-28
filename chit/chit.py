@@ -437,10 +437,15 @@ class Chat:
         def _process_commit_id(commit_id: str):
             commit = self.messages[commit_id]
             commit_id_proc = commit_id[:6]
-            commit_id_proc = f'[{commit.message["role"][0]}]' + commit_id_proc
-            if commit_id == self.current_id:
-                commit_id_proc += '*'
+            role = commit.message['role']
+            prefix = f"[{role[0]}{'*' if commit_id == self.current_id else role[1]}]"
+            commit_id_proc = prefix + commit_id_proc
             return commit_id_proc
+        
+        def _process_branch_name(branch_name: str):
+            if branch_name == self.current_branch:
+                return f' ({branch_name}*)'
+            return f' ({branch_name})'
 
         def draw_from(frontier_id: str, branch_name: str) -> list[str]:
             log_lines: list[str] = []
@@ -452,7 +457,7 @@ class Chat:
             if hasattr(frontier, "heir_id"):
                 log_lines[0] += '──'
                 if frontier.heir_id is None:
-                    log_lines[0] += f' ({branch_name})'
+                    log_lines[0] += _process_branch_name(branch_name)
                 else:
                     subtree: list[str] = draw_from(frontier.heir_id, frontier.home_branch)
                     # we would like to just append subtree to the current log
@@ -479,14 +484,14 @@ class Chat:
                         if line[horizontal_pos] == ' ': # extend
                             line = line[:horizontal_pos] + '│' + line[horizontal_pos+1:]
                         log_lines[i] = line
-                    log_lines.append(' ' * horizontal_pos + '└')
+                    log_lines.append(' ' * horizontal_pos + '└─')
                     indent: int = horizontal_pos + 1 # the length of log_lines[-1]
                     log_lines[-1] += subtree[0]
                     for subtree_line in subtree[1:]:
                         log_lines.append(' ' * indent + subtree_line)
             
             if not frontier.children:
-                log_lines[0] += f' ({branch_name})'
+                log_lines[0] += _process_branch_name(branch_name)
             return log_lines
         
         log_lines: list[str] = draw_from(self.root_id, 'master')
