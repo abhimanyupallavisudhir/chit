@@ -421,6 +421,71 @@ class Chat:
             
         return results
 
+    def _process_commit_id(self, commit_id: str):
+        """Helper function for Chat.log()"""
+        commit = self.messages[commit_id]
+        commit_id_proc = commit_id[:6]
+        role = commit.message['role']
+        prefix = f"[{role[0]}{'*' if commit_id == self.current_id else '_'}]"
+        commit_id_proc = prefix + commit_id_proc
+        return commit_id_proc
+    
+    def _process_branch_name(self, branch_name: str):
+        """Helper function for Chat.log()"""
+        if branch_name == self.current_branch:
+            return f' ({branch_name}*)'
+        return f' ({branch_name})'
+
+    def _draw_from(self, frontier_id: str, branch_name: str) -> list[str]:
+        """Helper function for Chat.log()"""
+        log_lines: list[str] = []
+        log_lines.append(self._process_commit_id(frontier_id))
+        frontier: Message = self.messages[frontier_id]
+
+        horizontal_pos: int = len(log_lines[0]) # position where stuff should be added
+
+        if hasattr(frontier, "heir_id"):
+            log_lines[0] += '──'
+            if frontier.heir_id is None:
+                log_lines[0] += self._process_branch_name(branch_name)
+            else:
+                subtree: list[str] = self._draw_from(frontier.heir_id, frontier.home_branch)
+                # we would like to just append subtree to the current log
+                # but it's actually multiple lines that need to get appended 
+                # to the right propositions
+                indent: int = len(log_lines[0])
+                log_lines[0] += subtree[0]
+                for subtree_line in subtree[1:]:
+                    log_lines.append(' ' * indent + subtree_line)
+
+        for child_branch, child_id in frontier.children.items():
+            if child_branch == frontier.home_branch:
+                # already processed the heir
+                continue
+            else:
+                for i in range(len(log_lines)):
+                    if i == 0:
+                        continue
+                    line = log_lines[i]
+                    if line[horizontal_pos] == '└': # no longer the final branch
+                        line = line[:horizontal_pos] + '├' + line[horizontal_pos+1:]
+                    if line[horizontal_pos] == ' ': # extend
+                        line = line[:horizontal_pos] + '│' + line[horizontal_pos+1:]
+                    log_lines[i] = line
+                log_lines.append(' ' * horizontal_pos + '└─')
+                if child_id is None:
+                    log_lines[-1] += self._process_branch_name(child_branch)
+                else:
+                    subtree: list[str] = self._draw_from(child_id, child_branch)
+                    indent: int = horizontal_pos + 1 # the length of log_lines[-1]
+                    log_lines[-1] += subtree[0]
+                    for subtree_line in subtree[1:]:
+                        log_lines.append(' ' * indent + subtree_line)
+        
+        if not frontier.children:
+            log_lines[0] += self._process_branch_name(branch_name)
+        return log_lines
+
     def log(self) -> str:
         """
         Generate a tree visualization of the conversation history, like this:
@@ -428,84 +493,14 @@ class Chat:
         001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
                       ├─bb2b2b──adaf938 (features)
                       |       └─f2f2f2*──aa837r (design_discussion)
-                      |                        ├ (figma_help)
+                      |                        ├ (flask_help)
                       |                        └ (tree_viz_help*)
                       └─r228df──f2f2f2 (publishing)
                               └─j38392──b16327 (pypi)
 
-        """
-        def _process_commit_id(commit_id: str):
-            commit = self.messages[commit_id]
-            commit_id_proc = commit_id[:6]
-            role = commit.message['role']
-            prefix = f"[{role[0]}{'*' if commit_id == self.current_id else role[1]}]"
-            commit_id_proc = prefix + commit_id_proc
-            return commit_id_proc
-        
-        def _process_branch_name(branch_name: str):
-            if branch_name == self.current_branch:
-                return f' ({branch_name}*)'
-            return f' ({branch_name})'
-
-        def draw_from(frontier_id: str, branch_name: str) -> list[str]:
-            log_lines: list[str] = []
-            log_lines.append(_process_commit_id(frontier_id))
-            frontier: Message = self.messages[frontier_id]
-
-            horizontal_pos: int = len(log_lines[0]) # position where stuff should be added
-
-            if hasattr(frontier, "heir_id"):
-                log_lines[0] += '──'
-                if frontier.heir_id is None:
-                    log_lines[0] += _process_branch_name(branch_name)
-                else:
-                    subtree: list[str] = draw_from(frontier.heir_id, frontier.home_branch)
-                    # we would like to just append subtree to the current log
-                    # but it's actually multiple lines that need to get appended 
-                    # to the right propositions
-                    indent: int = len(log_lines[0])
-                    log_lines[0] += subtree[0]
-                    for subtree_line in subtree[1:]:
-                        log_lines.append(' ' * indent + subtree_line)
-
-            for child_branch, child_id in frontier.children.items():
-                if child_branch == frontier.home_branch:
-                    # already processed the heir
-                    continue
-                else:
-                    
-                    subtree: list[str] = draw_from(child_id, child_branch)
-                    for i in range(len(log_lines)):
-                        if i == 0:
-                            continue
-                        line = log_lines[i]
-                        if line[horizontal_pos] == '└': # no longer the final branch
-                            line = line[:horizontal_pos] + '├' + line[horizontal_pos+1:]
-                        if line[horizontal_pos] == ' ': # extend
-                            line = line[:horizontal_pos] + '│' + line[horizontal_pos+1:]
-                        log_lines[i] = line
-                    log_lines.append(' ' * horizontal_pos + '└─')
-                    indent: int = horizontal_pos + 1 # the length of log_lines[-1]
-                    log_lines[-1] += subtree[0]
-                    for subtree_line in subtree[1:]:
-                        log_lines.append(' ' * indent + subtree_line)
-            
-            if not frontier.children:
-                log_lines[0] += _process_branch_name(branch_name)
-            return log_lines
-        
-        log_lines: list[str] = draw_from(self.root_id, 'master')
+        """        
+        log_lines: list[str] = self._draw_from(self.root_id, 'master')
         return '\n'.join(log_lines)
-
-
-                        
-
-
-
-
-        
-
-
 
     def viz(self, file_path: Optional[str | Path] = None) -> None:
         """
