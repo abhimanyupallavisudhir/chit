@@ -444,6 +444,11 @@ class Chat:
             # Prepare display for current node
             current_str = short_id(current_id)
             
+            # Add role indicator
+            role = node.message.get("role", "")
+            if role:
+                current_str += f"[{role[0]}]"
+            
             # Mark current checkout
             if current_id == self.current_id:
                 current_str += "*"
