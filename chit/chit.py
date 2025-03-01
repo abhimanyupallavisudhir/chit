@@ -65,6 +65,8 @@ class Chat:
 
     def commit(self, role: str = "user", message: str | None = None, image_path: str | Path | None = None) -> str:
         # check that checked-out message does not already have a child in the checked-out branch
+        ROLE_SHORTS = {"u": "user", "a": "assistant", "s": "system"}
+        role = ROLE_SHORTS.get(role.lower(), role)
         existing_child_id = self.messages[self.current_id].children[self.current_branch]
         if existing_child_id is not None:
             raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}")
