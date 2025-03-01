@@ -319,7 +319,7 @@ class Chat:
         chat.branch_tips = data["branch_tips"]
         return chat
 
-    def rm(self, branch_name: str) -> None:
+    def _rm_branch(self, branch_name: str) -> None:
         """Remove all messages associated with a branch."""
         # Check if we're trying to remove current branch or home branch
         if (branch_name == self.current_branch or 
@@ -353,6 +353,50 @@ class Chat:
         # Remove from branch_tips if present
         if branch_name in self.branch_tips:
             del self.branch_tips[branch_name]
+
+    def _rm_commit(self, commit_id: str) -> None:
+        """Remove a commit and all its children."""
+        if commit_id not in self.messages:
+            raise ValueError(f"Message {commit_id} does not exist")
+        
+        message = self.messages[commit_id]
+
+        # if removing the current commit, checkout the parent
+        if commit_id == self.current_id:
+            self.current_id = message.parent_id
+            self.current_branch = message.home_branch
+        
+        # kill all children
+        for child_id in message.children.values():
+            if child_id is not None:
+                self._rm_commit(child_id)
+
+        # Update parent's children
+        if message.parent_id is not None:
+            parent = self.messages[message.parent_id]
+            for branch, child_id in parent.children.items():
+                if child_id == commit_id:
+                    parent.children[branch] = None
+
+        # Update branch_tips
+        self.branch_tips = {branch: tip_id for branch, tip_id in self.branch_tips.items() if tip_id != commit_id}
+
+        # Delete the message
+        del self.messages[commit_id]
+
+        return
+
+    def rm(self, commit_id: str | None = None, branch_name: str | None = None, force=False) -> None:
+        if not force:
+            confirm = input(f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}? (y/n) ")
+            if confirm.lower() != 'y':
+                return
+        if commit_id is not None:
+            if branch_name is not None:
+                raise ValueError("cannot specify both commit_name and branch_name for rm")
+            self._rm_commit(commit_id)
+        elif branch_name is not None:
+            self._rm_branch(branch_name)
 
     def mv(self, branch_name_old: str, branch_name_new: str) -> None:
         """Rename a branch throughout the tree."""
