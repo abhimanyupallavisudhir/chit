@@ -426,7 +426,7 @@ class Chat:
         commit = self.messages[commit_id]
         commit_id_proc = commit_id[:6]
         role = commit.message['role']
-        prefix = f"[{role[0]}{'*' if commit_id == self.current_id else '_'}]"
+        prefix = f"[{role[0].upper()}{'*' if commit_id == self.current_id else '_'}]"
         commit_id_proc = prefix + commit_id_proc
         return commit_id_proc
     
@@ -436,7 +436,7 @@ class Chat:
             return f' ({branch_name}*)'
         return f' ({branch_name})'
 
-    def _draw_from(self, frontier_id: str, branch_name: str) -> list[str]:
+    def _log_tree_draw_from(self, frontier_id: str, branch_name: str) -> list[str]:
         """Helper function for Chat.log()"""
         log_lines: list[str] = []
         log_lines.append(self._process_commit_id(frontier_id))
@@ -449,7 +449,7 @@ class Chat:
             if frontier.heir_id is None:
                 log_lines[0] += self._process_branch_name(branch_name)
             else:
-                subtree: list[str] = self._draw_from(frontier.heir_id, frontier.home_branch)
+                subtree: list[str] = self._log_tree_draw_from(frontier.heir_id, frontier.home_branch)
                 # we would like to just append subtree to the current log
                 # but it's actually multiple lines that need to get appended 
                 # to the right propositions
@@ -476,31 +476,96 @@ class Chat:
                 if child_id is None:
                     log_lines[-1] += self._process_branch_name(child_branch)
                 else:
-                    subtree: list[str] = self._draw_from(child_id, child_branch)
+                    subtree: list[str] = self._log_tree_draw_from(child_id, child_branch)
                     indent: int = horizontal_pos + 1 # the length of log_lines[-1]
                     log_lines[-1] += subtree[0]
                     for subtree_line in subtree[1:]:
                         log_lines.append(' ' * indent + subtree_line)
         
-        if not frontier.children:
+        if not frontier.children or all(v is None for v in frontier.children.values()):
             log_lines[0] += self._process_branch_name(branch_name)
         return log_lines
 
-    def log(self) -> str:
+    def _log_tree(self) -> str:
         """
         Generate a tree visualization of the conversation history, like this:
 
         001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
                       ├─bb2b2b──adaf938 (features)
-                      |       └─f2f2f2*──aa837r (design_discussion)
+                      |       └─f2f2f2*──aa837r (design_discussion*)
                       |                        ├ (flask_help)
-                      |                        └ (tree_viz_help*)
+                      |                        └ (tree_viz_help)
                       └─r228df──f2f2f2 (publishing)
                               └─j38392──b16327 (pypi)
 
         """        
-        log_lines: list[str] = self._draw_from(self.root_id, 'master')
-        return '\n'.join(log_lines)
+        log_lines: list[str] = self._log_tree_draw_from(self.root_id, 'master')
+        res = '\n'.join(log_lines)
+        return res
+
+    def _process_message_content(self, content: str | list[dict[str, str]]) -> str:
+        if isinstance(content, list):
+            content_proc = "<img>"
+            for item in content:
+                if item["type"] == "text":
+                    content_proc += item["text"]
+                    break
+        else:
+            content_proc = content
+        content_proc = content_proc[:27] + '...'
+        return content_proc
+            
+
+    def _log_forum_draw_from(self, frontier_id: str) -> list[str]:
+        log_lines: list[str] = []
+        frontier: Message = self[frontier_id]
+        log_lines.append(f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier.message['content'])}")
+        # show heir first
+        if hasattr(frontier, "heir_id"):
+            if frontier.heir_id is None:
+                log_lines[0] += self._process_branch_name(frontier.home_branch)
+            else:
+                subtree: list[str] = self._log_forum_draw_from(frontier.heir_id) # recurse
+                subtree_ = [' ' * 4 + line for line in subtree] # indent
+                log_lines.extend(subtree_)
+        for child_branch, child_id in frontier.children.items():
+            if child_branch == frontier.home_branch:
+                continue # already processed the heir
+            elif child_id is None:
+                log_lines.append(' ' * 4 + self._process_branch_name(child_branch))
+            else:
+                subtree: list[str] = self._log_forum_draw_from(child_id) # recurse
+                subtree_ = [' ' * 4 + line for line in subtree] # indent
+                log_lines.extend(subtree_)
+        if not frontier.children or all(v is None for v in frontier.children.values()):
+            log_lines[0] += self._process_branch_name(frontier.home_branch)
+        return log_lines
+        
+
+    def _log_forum(self) -> str:
+        """
+        Generate a forum-style visualization of the conversation history, like this:
+
+        [S] 001e1e: You are a helpful assista...
+            [U] ab2839: Hello I am Dr James and I...
+                [A] 29239b: Hello Dr James, how can I...
+                    [U] f2foif9: I am trying to use the...
+                        [A] f2f2f2: Have you tried using... (master)
+                [A] bb2b2b: Hello Dr James, I see you...
+                    [U] adaf938: Can we implement the featur... (features)
+                    [U*] f2f2f2: This is actually a design issue...
+                        [A] aa837r: Sure, I'll help you design a React... (design_discussion*)
+                            (flask_help)
+                            (tree_viz_help)
+                [A] r228df: I see you are working on the... 
+                    [U] f2f2f2: Ok that worked. Now let's pu... (publishing)
+                    [U] j38392: How do I authenticate with p... 
+                        [A] b16327: Since you are working with g... (pypi)
+        """
+        log_lines: list[str] = self._log_forum_draw_from(self.root_id)
+        res = "\n".join(log_lines)
+        print(res)
+
 
     def viz(self, file_path: Optional[str | Path] = None) -> None:
         """

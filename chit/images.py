@@ -62,7 +62,7 @@ def prepare_image_url(image_path: str | Path) -> str:
         img_b64 = base64.b64encode(img_bytes).decode()
         return f"data:{mime_type};base64,{img_b64}"
     
-def prepare_image_message(message: str, image_path: str | Path) -> str:
+def prepare_image_message(message: str, image_path: str | Path) -> list[dict[str, str]]:
     """
     Embed an image into a message using Markdown syntax.
 
