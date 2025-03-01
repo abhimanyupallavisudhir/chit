@@ -3,9 +3,10 @@ import webbrowser
 from dataclasses import dataclass
 from typing import Dict, Optional, Pattern, Any, Literal
 from pathlib import Path
-import uuid
 import json
 import re
+import string
+import random
 from litellm import completion, stream_chunk_builder
 from chit.images import prepare_image_message
 
@@ -25,7 +26,7 @@ class Chat:
     def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
         self.model = model
         self.remote = None
-        initial_id = str(uuid.uuid4())
+        initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
 
         # Initialize with system message
@@ -46,6 +47,16 @@ class Chat:
         # that branch in its children attribute's keys
         self.branch_tips: Dict[str, str] = {"master": initial_id}
 
+    def _generate_short_id(self, length: int = 8) -> str:
+        """Generate a short, unique ID of specified length"""
+        while True:
+            # Create a random string of hexadecimal characters
+            new_id = ''.join(random.choices(string.hexdigits.lower(), k=length))
+            
+            # Ensure it doesn't already exist in our messages
+            if not hasattr(self, 'messages') or new_id not in self.messages:
+                return new_id
+
     def commit(self, role: str = "user", message: str | None = None, image_path: str | Path | None = None) -> str:
         # check that checked-out message does not already have a child in the checked-out branch
         existing_child_id = self.messages[self.current_id].children[self.current_branch]
@@ -58,7 +69,7 @@ class Chat:
         if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
             raise ValueError("Cannot commit two messages with the same role in a row")
         
-        new_id = str(uuid.uuid4())
+        new_id = self._generate_short_id()
 
         if image_path is not None:
             assert role == "user", "Only user messages can include images"
@@ -424,7 +435,7 @@ class Chat:
     def _process_commit_id(self, commit_id: str):
         """Helper function for Chat.log()"""
         commit = self.messages[commit_id]
-        commit_id_proc = commit_id[:6]
+        commit_id_proc = commit_id
         role = commit.message['role']
         prefix = f"[{role[0].upper()}{'*' if commit_id == self.current_id else '_'}]"
         commit_id_proc = prefix + commit_id_proc
