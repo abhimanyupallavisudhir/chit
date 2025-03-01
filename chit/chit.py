@@ -1,7 +1,7 @@
 import tempfile
 import webbrowser
 from dataclasses import dataclass
-from typing import Dict, Optional, Pattern, Any
+from typing import Dict, Optional, Pattern, Any, Literal
 from pathlib import Path
 import uuid
 import json
@@ -567,7 +567,7 @@ class Chat:
         print(res)
 
 
-    def viz(self, file_path: Optional[str | Path] = None) -> None:
+    def _gui(self, file_path: Optional[str | Path] = None) -> None:
         """
         Create and open an interactive visualization of the chat tree.
         
@@ -795,3 +795,11 @@ class Chat:
     </body>
     </html>
     """
+
+    def log(self, style:Literal["tree", "forum", "gui"]="tree"):
+        if style == "tree":
+            self._log_tree()
+        elif style == "forum":
+            self._log_forum()
+        elif style == "gui":
+            self._gui()
