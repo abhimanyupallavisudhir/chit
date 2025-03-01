@@ -197,7 +197,10 @@ class Chat:
             if branch_name not in self.branch_tips:
                 raise ValueError(f"Branch '{branch_name}' does not exist")
             # Always checkout to the latest message containing this branch
-            self.current_id = self.branch_tips[branch_name]
+            if message_id is None:
+                self.current_id = self.branch_tips[branch_name]
+            else:
+                assert branch_name in self.messages[message_id].children, f"Branch {branch_name} not found in message {message_id}"
             self.current_branch = branch_name
         else:
             self.current_branch = self.messages[self.current_id].home_branch
@@ -319,12 +322,83 @@ class Chat:
         chat.branch_tips = data["branch_tips"]
         return chat
 
+    @property
+    def current_message(self):
+        return self[self.current_id]
+
+    def _is_descendant(self, child_id: str, ancestor_id: str) -> bool:
+        """
+        Test if ancestor_id is an ancestor of child_id
+        
+        Args:
+            child_id: ID of the potential descendant
+            ancestor_id: ID of the potential ancestor
+            
+        Returns:
+            bool: True if ancestor_id is an ancestor of child_id, False otherwise
+            
+        Raises:
+            ValueError: If either ID doesn't exist in the chat
+        """
+        if child_id not in self.messages:
+            raise ValueError(f"Message {child_id} does not exist")
+            
+        if ancestor_id not in self.messages:
+            raise ValueError(f"Message {ancestor_id} does not exist")
+        
+        # If they're the same, return False (not a true ancestor)
+        if child_id == ancestor_id:
+            return True
+        
+        # Traverse up from child until we either find the ancestor or reach the root
+        current = self.messages[child_id].parent_id
+        
+        while current is not None:
+            if current == ancestor_id:
+                return True
+            current = self.messages[current].parent_id
+            
+        return False
+
+    def _check_kalidasa_branch(self, branch_name: str) -> tuple[str, str]:
+        """
+        Check if we are trying to cut the branch we are checked out on (via an 
+        ancestral branch), and return the commit and branch we must checkout to to cut it.
+        """
+        current_id = self.current_id
+        current_branch = self.current_branch
+        current_message = self[current_id]
+        if current_branch == branch_name:
+            current_branch = current_message.home_branch
+        while True:
+            if current_message.home_branch == branch_name:
+                current_id = current_message.parent_id
+                current_branch = self[current_id].home_branch
+                if current_id is None: # nothing we can do if you're trying to delete master
+                    break
+                else:
+                    current_message = self[current_id]
+            else:
+                break
+        return current_id, current_branch
+    
+    def _check_kalidasa_commit(self, commit_id: str) -> tuple[str, str]:
+        """Check if we are trying to cut the branch we are checked out on (via an 
+        ancestral commit), and return the commit and branch we must checkout to cut it.
+        """
+        if self._is_descendant(child_id=self.current_id, ancestor_id=commit_id):
+            parent_id = self[commit_id].parent_id
+            if parent_id is None:
+                raise ValueError("Cannot delete root message")
+            parent_message = self[parent_id]
+            return parent_id, parent_message.home_branch
+        else:
+            return self.current_id, self.current_branch
+        
     def _rm_branch(self, branch_name: str) -> None:
         """Remove all messages associated with a branch."""
         # Check if we're trying to remove current branch or home branch
-        if (branch_name == self.current_branch or 
-            branch_name == self.messages[self.current_id].home_branch):
-            raise ValueError("KalidasaError: attempted to remove the currently checked out branch or the home branch of the currently checked out message")
+        self.checkout(*self._check_kalidasa_branch(branch_name))
 
         # First pass: identify messages to delete and clean up their parent references
         to_delete = set()
@@ -361,10 +435,8 @@ class Chat:
         
         message = self.messages[commit_id]
 
-        # if removing the current commit, checkout the parent
-        if commit_id == self.current_id:
-            self.current_id = message.parent_id
-            self.current_branch = message.home_branch
+        # if removing the current commit or an ancestor, checkout its parent
+        self.checkout(*self._check_kalidasa_commit(commit_id))
         
         # kill all children
         for child_id in message.children.values():
