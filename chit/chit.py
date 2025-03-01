@@ -482,8 +482,8 @@ class Chat:
                     for subtree_line in subtree[1:]:
                         log_lines.append(' ' * indent + subtree_line)
         
-        if not frontier.children or all(v is None for v in frontier.children.values()):
-            log_lines[0] += self._process_branch_name(branch_name)
+        # if not frontier.children or all(v is None for v in frontier.children.values()):
+        #     log_lines[0] += self._process_branch_name(branch_name)
         return log_lines
 
     def _log_tree(self) -> str:
@@ -505,14 +505,14 @@ class Chat:
 
     def _process_message_content(self, content: str | list[dict[str, str]]) -> str:
         if isinstance(content, list):
-            content_proc = "<img>"
+            content_proc = "<IMG>"
             for item in content:
                 if item["type"] == "text":
                     content_proc += item["text"]
                     break
         else:
             content_proc = content
-        content_proc = content_proc[:27] + '...'
+        content_proc = content_proc[:57] + '...'
         return content_proc
             
 
@@ -537,8 +537,8 @@ class Chat:
                 subtree: list[str] = self._log_forum_draw_from(child_id) # recurse
                 subtree_ = [' ' * 4 + line for line in subtree] # indent
                 log_lines.extend(subtree_)
-        if not frontier.children or all(v is None for v in frontier.children.values()):
-            log_lines[0] += self._process_branch_name(frontier.home_branch)
+        # if not frontier.children or all(v is None for v in frontier.children.values()):
+        #     log_lines[0] += self._process_branch_name(frontier.home_branch)
         return log_lines
         
 
@@ -564,7 +564,7 @@ class Chat:
         """
         log_lines: list[str] = self._log_forum_draw_from(self.root_id)
         res = "\n".join(log_lines)
-        print(res)
+        return res
 
 
     def _gui(self, file_path: Optional[str | Path] = None) -> None:
@@ -798,8 +798,8 @@ class Chat:
 
     def log(self, style:Literal["tree", "forum", "gui"]="tree"):
         if style == "tree":
-            self._log_tree()
+            print(self._log_tree())
         elif style == "forum":
-            self._log_forum()
+            print(self._log_forum())
         elif style == "gui":
             self._gui()
