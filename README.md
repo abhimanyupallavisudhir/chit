@@ -7,14 +7,14 @@ The `chit.Chat` class has methods:
 - `commit()` for adding new messages (either user or assistant). For creating an assistant message, the message path leading up to the current checked-out message is sent to the LLM.
 - `branch()` for creating a new branch at the current checked-out message
 - `checkout()` for changing the checkout message. 
-- `push()` for dumping data to a json file we call the `remote`
+- `push()` for dumping pushing to a `remote` (a json file + an html gui visualization)
 - `clone()` a classmethod for initializing a `chit.Chat` object from a json file
 - sensible indexing and slicing
 - `rm()` for removing a branch or commit
 - `mv()` for renaming a branch
 - `find()` for finding in conversation history
 - `log()` for creating simple tree or forum style visualizations of the chat
-- `gui()` for creating a (non-interactive) gui output of the conversation similar to a classic LLM interface
+- `gui()` for creating a (non-interactive) html gui output of the conversation similar to a classic LLM interface
 
 We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions. Vision is supported, including images from the clipboard like so: `chat.commit("user", "Analyze this image.", image_path = 'CB')`.
 
