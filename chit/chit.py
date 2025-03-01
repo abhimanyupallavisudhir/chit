@@ -1,5 +1,6 @@
 import tempfile
 import webbrowser
+import warnings
 from dataclasses import dataclass
 from typing import Dict, Optional, Pattern, Any, Literal
 from pathlib import Path
@@ -22,10 +23,15 @@ class Message:
     def heir_id(self):
         return self.children[self.home_branch]
 
+@dataclass
+class Remote:
+    json_file: str | None
+    html_file: str | None
+
 class Chat:
     def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
         self.model = model
-        self.remote = None
+        self.remote = None # just set this manually e.g. chat.remote = Remote(file.json, file.html)
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
 
@@ -212,17 +218,25 @@ class Chat:
         """Save chat history to configured remote"""
         if self.remote is None:
             raise ValueError("No remote configured. Set chat.remote first.")
-            
-        data = {
-            "model": self.model,
-            "messages": {k: vars(v) for k, v in self.messages.items()},
-            "current_id": self.current_id,
-            "current_branch": self.current_branch,
-            "root_id": self.root_id,
-            "branch_tips": self.branch_tips
-        }
-        with open(self.remote, 'w') as f:
-            json.dump(data, f)
+        
+        if self.remote.json_file is None:
+            warnings.warn("No JSON file configured in remote. Chat history will not be saved.")
+        else:
+            data = {
+                "model": self.model,
+                "messages": {k: vars(v) for k, v in self.messages.items()},
+                "current_id": self.current_id,
+                "current_branch": self.current_branch,
+                "root_id": self.root_id,
+                "branch_tips": self.branch_tips
+            }
+            with open(self.remote.json_file, 'w') as f:
+                json.dump(data, f)
+        
+        if self.remote.html_file is not None:
+            html_content = self._generate_viz_html()
+            with open(self.remote.html_file, 'w') as f:
+                f.write(html_content)
 
 
     def __getitem__(self, key: str | int | list[str] | slice) -> Message | list[Message]:

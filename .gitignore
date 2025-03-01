@@ -6,3 +6,5 @@
 **/*.pyd
 foo.json
 foo.html
+foo2.json
+foo2.html

@@ -1,1 +1,1 @@
-from .chit import Chat
+from .chit import *
