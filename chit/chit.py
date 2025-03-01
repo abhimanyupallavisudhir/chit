@@ -567,7 +567,7 @@ class Chat:
         return res
 
 
-    def _gui(self, file_path: Optional[str | Path] = None) -> None:
+    def gui(self, file_path: Optional[str | Path] = None) -> None:
         """
         Create and open an interactive visualization of the chat tree.
         
@@ -802,4 +802,4 @@ class Chat:
         elif style == "forum":
             print(self._log_forum())
         elif style == "gui":
-            self._gui()
+            self.gui()
