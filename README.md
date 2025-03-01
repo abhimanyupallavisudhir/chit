@@ -16,6 +16,6 @@ The `chit.Chat` class has methods:
 - `log()` for creating simple tree or forum style visualizations of the chat
 - `gui()` for creating a (non-interactive) html gui output of the conversation similar to a classic LLM interface
 
-We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions. Vision is supported, including images from the clipboard like so: `chat.commit("user", "Analyze this image.", image_path = 'CB')`.
+We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions. Vision is supported, including images from the clipboard like so: `chat.commit("user", "Analyze this image.", image_path = '^V')`.
 
 See [example.ipynb](example.ipynb) for some demonstration, as well as [example2.ipynb](example2.ipynb) where we re-clone an earlier chat and play with it.

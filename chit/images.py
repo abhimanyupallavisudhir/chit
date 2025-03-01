@@ -10,9 +10,9 @@ def prepare_image_url(image_path: str | Path) -> str:
     """
     Convert image path/URL into a format suitable for API calls.
     Returns base64 data URI for local files, or original URL for web URLs.
-    Special value 'CB' reads from clipboard.
+    Special value '^V' reads from clipboard.
     """
-    if image_path == 'CB':
+    if image_path == '^V':
         # Get image from clipboard
         try:
             clipboard_img = ImageGrab.grabclipboard()
@@ -66,7 +66,7 @@ def prepare_image_message(message: str, image_path: str | Path) -> list[dict[str
     """
     Embed an image into a message using Markdown syntax.
 
-    image_path: Path to image file, URL, or 'CB' to read from clipboard.
+    image_path: Path to image file, URL, or '^V' to read from clipboard.
     """
     image_url = prepare_image_url(image_path)
     return [

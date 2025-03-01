@@ -63,13 +63,22 @@ class Chat:
             if not hasattr(self, 'messages') or new_id not in self.messages:
                 return new_id
 
-    def commit(self, role: str = "user", message: str | None = None, image_path: str | Path | None = None) -> str:
-        # check that checked-out message does not already have a child in the checked-out branch
+    def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None) -> str:
+        if role is None: # automatically infer role based on current message
+            current_role = self[self.current_id].message["role"]
+            role = {
+                "user": "assistant",
+                "assistant": "user",
+                "system": "user"
+            }.get(current_role)
+        # allow short roles
         ROLE_SHORTS = {"u": "user", "a": "assistant", "s": "system"}
         role = ROLE_SHORTS.get(role.lower(), role)
         existing_child_id = self.messages[self.current_id].children[self.current_branch]
+
+        # check that checked-out message does not already have a child in the checked-out branch
         if existing_child_id is not None:
-            raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}")
+            raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. Kill it first with chit.Chat.rm()")
         
         if role == "user" and message is None and image_path is None:
             raise ValueError("User messages must provide content")
