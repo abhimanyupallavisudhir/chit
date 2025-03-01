@@ -25,8 +25,8 @@ class Message:
 
 @dataclass
 class Remote:
-    json_file: str | None
-    html_file: str | None
+    json_file: str | None = None
+    html_file: str | None = None
 
 class Chat:
     def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
@@ -219,9 +219,7 @@ class Chat:
         if self.remote is None:
             raise ValueError("No remote configured. Set chat.remote first.")
         
-        if self.remote.json_file is None:
-            warnings.warn("No JSON file configured in remote. Chat history will not be saved.")
-        else:
+        if self.remote.json_file is not None:
             data = {
                 "model": self.model,
                 "messages": {k: vars(v) for k, v in self.messages.items()},
