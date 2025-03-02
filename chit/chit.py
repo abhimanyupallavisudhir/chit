@@ -8,8 +8,16 @@ import json
 import re
 import string
 import random
+import litellm
 from litellm import completion, stream_chunk_builder
 from chit.images import prepare_image_message
+
+from litellm.types.utils import (
+    # ModelResponse,
+    ChatCompletionMessageToolCall,
+    Function,
+)
+
 
 @dataclass
 class Message:
@@ -18,6 +26,7 @@ class Message:
     children: Dict[str, Optional[str]]  # branch_name -> child_id
     parent_id: Optional[str]
     home_branch: str
+    tool_calls: list[ChatCompletionMessageToolCall] | None = None
 
     @property
     def heir_id(self):
@@ -29,7 +38,7 @@ class Remote:
     html_file: str | None = None
 
 class Chat:
-    def __init__(self, model: str = "openrouter/deepseek/deepseek-chat"):
+    def __init__(self, model: str = "openrouter/deepseek/deepseek-chat", tools: list[callable] | None = None):
         self.model = model
         self.remote = None # just set this manually e.g. chat.remote = Remote(file.json, file.html)
         initial_id = self._generate_short_id()
@@ -53,6 +62,23 @@ class Chat:
         # that branch in its children attribute's keys
         self.branch_tips: Dict[str, str] = {"master": initial_id}
 
+        self.tools: list[callable] | None = tools
+        self._recalc_tools()
+
+    def _recalc_tools(self):
+        if self.tools is not None:
+            for tool in self.tools:
+                if not callable(tool):
+                    raise ValueError("1) what")
+                if not hasattr(tool, "json") or not isinstance(tool.json, dict):
+                    # a tool is a function with an attribute json of type dict.
+                    # can automatically calculate the json if it has a numpydoc 
+                    # docstring
+                    json_spec: dict = litellm.utils.function_to_dict(tool)
+                    tool.json = {"type": "function", "function": json_spec}
+            self.tools_ = [tool.json for tool in self.tools]
+            self.tool_map = {tool.json["function"]["name"]: tool for tool in self.tools}
+
     def _generate_short_id(self, length: int = 8) -> str:
         """Generate a short, unique ID of specified length"""
         while True:
@@ -66,11 +92,22 @@ class Chat:
     def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None) -> str:
         if role is None: # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
-            role = {
-                "user": "assistant",
-                "assistant": "user",
-                "system": "user"
-            }.get(current_role)
+            if current_role == "system":
+                role = "user"
+            elif current_role == "user":
+                role = "assistant"
+            elif current_role == "assistant":
+                if self[self.current_id].tool_calls:
+                    role = "tool"
+                else:
+                    role = "user"
+            elif current_role == "tool":
+                if self[self.current_id].tool_calls:
+                    role = "tool"
+                else:
+                    role = "assistant"
+            else:
+                raise ValueError(f"current_role {current_role} not supported")
         # allow short roles
         ROLE_SHORTS = {"u": "user", "a": "assistant", "s": "system"}
         role = ROLE_SHORTS.get(role.lower(), role)
@@ -92,21 +129,58 @@ class Chat:
             assert role == "user", "Only user messages can include images"
             message = prepare_image_message(message, image_path)
 
+        response_tool_calls = None # None by default unless assistant calls for it or we have some from previous tool call
+        message_meta = {} # extra fields for the message dict besides role and content, only necessary for role="tool" messages
+
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            _response = completion(model=self.model, messages=history, stream=True)
+            if hasattr(self, "tools_") and self.tools_ is not None:
+                _response = completion(model=self.model, messages=history, tools=self.tools_, tool_choice="auto", stream=True)
+            else:
+                _response = completion(model=self.model, messages=history, stream=True)
             chunks = []
             for chunk in _response:
                 print(chunk.choices[0].delta.content or "", end="")
                 chunks.append(chunk)
             response = stream_chunk_builder(chunks, messages=history)
             message = response.choices[0].message.content
+            try:
+                response_tool_calls: list[ChatCompletionMessageToolCall] | None = response.choices[
+                    0
+                ].message.tool_calls
+            except Exception as e:
+                ...
+        
+        if role == "tool":
+            response_tool_calls = self[self.current_id].tool_calls
+            if not response_tool_calls:
+                raise ValueError("No tool calls requested to call")
+            t: ChatCompletionMessageToolCall = response_tool_calls.pop(0)
+            f: Function = t.function
+            f_name: str = f.name
+            f_args: str = f.arguments
+            if f_name not in self.tool_map:
+                warnings.warn(f"Tool {f_name} not found in tool_map; skipping")
+                tool_result = f"ERROR: Tool {f_name} not found"
+            else:
+                tool: callable = self.tool_map[f_name]
+                tool_kwargs: dict = json.loads(f_args)
+                try:
+                    tool_result: Any = tool(**tool_kwargs)
+                except Exception as e:
+                    tool_result: str = f"ERROR: {e}"
+                message = str(tool_result)
+                message_meta = {
+                    "tool_call_id": t.id,
+                    "name": f_name,
+                }
 
         # Create new message
         new_message = Message(
             id=new_id,
-            message={"role": role, "content": message},
+            message={"role": role, "content": message} | message_meta,
+            tool_calls=response_tool_calls,
             children={self.current_branch: None},
             parent_id=self.current_id,
             home_branch=self.current_branch
@@ -123,6 +197,12 @@ class Chat:
 
         # Update checkout
         self.current_id = new_id
+
+        if response_tool_calls:
+            print(
+                f"{len(response_tool_calls)} tool calls requested; "
+                f"use {self.__qualname__}.commit() to call one-by-one"
+            )
 
         # return new_message.message["content"]
 
