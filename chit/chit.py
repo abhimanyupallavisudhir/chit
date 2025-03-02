@@ -371,6 +371,48 @@ class Chat:
             
         return False
 
+    def _get_branch_root(self, branch_name: str) -> str:
+        """
+        Find the first commit where a branch was created (the branch root)
+        
+        Args:
+            branch_name: Name of the branch to find the root for
+            
+        Returns:
+            str: ID of the branch root message
+            
+        Raises:
+            ValueError: If the branch doesn't exist
+        """
+        if branch_name not in self.branch_tips:
+            raise ValueError(f"Branch '{branch_name}' does not exist")
+        
+        # Start from the branch tip
+        current_id = self.branch_tips[branch_name]
+        
+        # Walk up the parent chain until we find a message with a different home_branch
+        while True:
+            current_msg = self.messages[current_id]
+            
+            # If this is the root message, it's the root of all branches
+            if current_msg.parent_id is None:
+                return current_id
+                
+            # Get the parent message
+            parent_id = current_msg.parent_id
+            parent_msg = self.messages[parent_id]
+            
+            # If the parent has a different home branch, then current_id is the branch root
+            if current_msg.home_branch == branch_name and parent_msg.home_branch != branch_name:
+                return current_id
+                
+            # Move up to the parent
+            current_id = parent_id
+            
+            # Safety check - if we reach a message without a home_branch, something's wrong
+            if not hasattr(current_msg, 'home_branch'):
+                raise ValueError(f"Invalid message structure: missing home_branch at {current_id}")
+
     def _check_kalidasa_branch(self, branch_name: str) -> tuple[str, str]:
         """
         Check if we are trying to cut the branch we are checked out on (via an 
