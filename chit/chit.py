@@ -17,6 +17,7 @@ from litellm.types.utils import (
     ChatCompletionMessageToolCall,
     Function,
 )
+from litellm.types.utils import Message as ChatCompletionMessage
 
 
 @dataclass
@@ -91,7 +92,11 @@ class Chat:
 
     def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None, enable_tools=True) -> str:
         if role is None: # automatically infer role based on current message
-            current_role = self[self.current_id].message["role"]
+            if isinstance(self.current_message.message, ChatCompletionMessage):
+                current_role = self.current_message.message.role
+            else:
+                assert isinstance(self.current_message.message, dict)
+                current_role = self.current_message.message["role"]
             if current_role == "system":
                 role = "user"
             elif current_role == "user":
@@ -116,12 +121,9 @@ class Chat:
         # check that checked-out message does not already have a child in the checked-out branch
         if existing_child_id is not None:
             raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. Kill it first with chit.Chat.rm()")
-        
-        if role == "user" and message is None and image_path is None:
-            raise ValueError("User messages must provide content")
-        
-        if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
-            raise ValueError("Cannot commit two messages with the same role in a row")
+                
+        # if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
+        #     raise ValueError("Cannot commit two messages with the same role in a row")
         
         new_id = self._generate_short_id()
 
@@ -130,18 +132,23 @@ class Chat:
             message = prepare_image_message(message, image_path)
 
         response_tool_calls = None # None by default unless assistant calls for it or we have some from previous tool call
-        message_meta = {} # extra fields for the message dict besides role and content, only necessary for role="tool" messages
+
+        if role == "user":
+            assert message is not None or image_path is not None, "User message cannot be blank"
+            message_full = {"role": role, "content": message}
+        
+        if role == "assistant" and message is not None:
+            # put words in mouth
+            message_full = {"role": role, "content": message}
 
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
             if hasattr(self, "tools_") and self.tools_ is not None and enable_tools:
                 response = completion(model=self.model, messages=history, tools=self.tools_, tool_choice="auto", stream=False)
-                message = response.choices[0].message.content
-                print(message)
-                response_tool_calls: list[ChatCompletionMessageToolCall] | None = response.choices[
-                    0
-                ].message.tool_calls
+                message_full: ChatCompletionMessage = response.choices[0].message
+                print(message_full.content)
+                response_tool_calls: list[ChatCompletionMessageToolCall] | None = message_full.tool_calls
             else:
                 _response = completion(model=self.model, messages=history, stream=True)
                 chunks = []
@@ -149,7 +156,7 @@ class Chat:
                     print(chunk.choices[0].delta.content or "", end="")
                     chunks.append(chunk)
                 response = stream_chunk_builder(chunks, messages=history)
-                message = response.choices[0].message.content
+                message_full: ChatCompletionMessage = response.choices[0].message
         
         if role == "tool":
             response_tool_calls = self[self.current_id].tool_calls
@@ -170,7 +177,9 @@ class Chat:
                 except Exception as e:
                     tool_result: str = f"ERROR: {e}"
                 message = str(tool_result)
-                message_meta = {
+                message_full = {
+                    "role": "tool",
+                    "content": message,
                     "tool_call_id": t.id,
                     "name": f_name,
                 }
@@ -178,7 +187,7 @@ class Chat:
         # Create new message
         new_message = Message(
             id=new_id,
-            message={"role": role, "content": message} | message_meta,
+            message=message_full,
             tool_calls=response_tool_calls,
             children={self.current_branch: None},
             parent_id=self.current_id,
@@ -199,8 +208,8 @@ class Chat:
 
         if response_tool_calls:
             print(
-                f"{len(response_tool_calls)} tool calls pending; "
-                f"use .commit() to call one-by-one"
+                f"<<<{len(response_tool_calls)} tool calls pending; "
+                f"use .commit() to call one-by-one>>>"
             )
 
         # return new_message.message["content"]
@@ -667,9 +676,20 @@ class Chat:
             message = self.messages[current_id]
             message_sequence.append(message)
             
+            # stupid mess HACK
+            message_: dict | ChatCompletionMessage = message.message
+            if isinstance(message_, ChatCompletionMessage):
+                rol = message_.role
+                con = message_.content
+            else:
+                assert isinstance(message_, dict)
+                rol = message_["role"]
+                con = message_["content"]
+
+
             # Check if message matches search criteria
-            if (roles is None or message.message["role"] in roles) and \
-               pattern.search(message.message["content"]):
+            if (roles is None or rol in roles) and \
+               pattern.search(con):
                 
                 # Get context if requested
                 context_messages = []
@@ -696,7 +716,11 @@ class Chat:
         """Helper function for Chat.log()"""
         commit = self.messages[commit_id]
         commit_id_proc = commit_id
-        role = commit.message['role']
+        if isinstance(commit.message, ChatCompletionMessage):
+            role = commit.message.role
+        else:
+            assert isinstance(commit.message, dict)
+            role = commit.message['role']
         prefix = f"[{role[0].upper()}{'*' if commit_id == self.current_id else '_'}]"
         commit_id_proc = prefix + commit_id_proc
         return commit_id_proc
@@ -790,7 +814,11 @@ class Chat:
     def _log_forum_draw_from(self, frontier_id: str) -> list[str]:
         log_lines: list[str] = []
         frontier: Message = self[frontier_id]
-        log_lines.append(f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier.message['content'])}")
+        if isinstance(frontier.message, ChatCompletionMessage):
+            frontier_content = frontier.message.content
+        else:
+            frontier_content = frontier.message["content"]
+        log_lines.append(f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier_content)}")
         # show heir first
         if hasattr(frontier, "heir_id"):
             if frontier.heir_id is None:
