@@ -92,11 +92,7 @@ class Chat:
 
     def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None, enable_tools=True) -> str:
         if role is None: # automatically infer role based on current message
-            if isinstance(self.current_message.message, ChatCompletionMessage):
-                current_role = self.current_message.message.role
-            else:
-                assert isinstance(self.current_message.message, dict)
-                current_role = self.current_message.message["role"]
+            current_role = self[self.current_id].message["role"]
             if current_role == "system":
                 role = "user"
             elif current_role == "user":
@@ -121,10 +117,7 @@ class Chat:
         # check that checked-out message does not already have a child in the checked-out branch
         if existing_child_id is not None:
             raise ValueError(f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. Kill it first with chit.Chat.rm()")
-                
-        # if role == self.messages[self.current_id].message["role"]: # NOTE might remove this check
-        #     raise ValueError("Cannot commit two messages with the same role in a row")
-        
+                        
         new_id = self._generate_short_id()
 
         if image_path is not None:
@@ -208,8 +201,8 @@ class Chat:
 
         if response_tool_calls:
             print(
-                f"<<<{len(response_tool_calls)} tool calls pending; "
-                f"use .commit() to call one-by-one>>>"
+                f"{len(response_tool_calls)} tool calls pending; "
+                f"use .commit() to call one-by-one"
             )
 
         # return new_message.message["content"]
@@ -676,20 +669,9 @@ class Chat:
             message = self.messages[current_id]
             message_sequence.append(message)
             
-            # stupid mess HACK
-            message_: dict | ChatCompletionMessage = message.message
-            if isinstance(message_, ChatCompletionMessage):
-                rol = message_.role
-                con = message_.content
-            else:
-                assert isinstance(message_, dict)
-                rol = message_["role"]
-                con = message_["content"]
-
-
             # Check if message matches search criteria
-            if (roles is None or rol in roles) and \
-               pattern.search(con):
+            if (roles is None or message.message["role"] in roles) and \
+               pattern.search(message.message["content"]):
                 
                 # Get context if requested
                 context_messages = []
@@ -716,11 +698,7 @@ class Chat:
         """Helper function for Chat.log()"""
         commit = self.messages[commit_id]
         commit_id_proc = commit_id
-        if isinstance(commit.message, ChatCompletionMessage):
-            role = commit.message.role
-        else:
-            assert isinstance(commit.message, dict)
-            role = commit.message['role']
+        role = commit.message['role']
         prefix = f"[{role[0].upper()}{'*' if commit_id == self.current_id else '_'}]"
         commit_id_proc = prefix + commit_id_proc
         return commit_id_proc
@@ -814,11 +792,7 @@ class Chat:
     def _log_forum_draw_from(self, frontier_id: str) -> list[str]:
         log_lines: list[str] = []
         frontier: Message = self[frontier_id]
-        if isinstance(frontier.message, ChatCompletionMessage):
-            frontier_content = frontier.message.content
-        else:
-            frontier_content = frontier.message["content"]
-        log_lines.append(f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier_content)}")
+        log_lines.append(f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier.message['content'])}")
         # show heir first
         if hasattr(frontier, "heir_id"):
             if frontier.heir_id is None:
