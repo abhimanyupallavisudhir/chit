@@ -4,7 +4,7 @@
 
 The `chit.Chat` class has methods:
 
-- `commit()` for adding new messages (either user or assistant). For creating an assistant message, the message path leading up to the current checked-out message is sent to the LLM.
+- `commit()` for adding new messages (either user or assistant). For creating an assistant message, the message path leading from the root to the current checked-out message is sent to the LLM.
 - `branch()` for creating a new branch at the current checked-out message
 - `checkout()` for changing the checkout message. 
 - `push()` for dumping pushing to a `remote` (a json file + an html gui visualization)
@@ -37,4 +37,6 @@ chat.tools.append(web_search)
 chat._recalc_tools()
 ```
 
-Here `web_search` should be a function with either (1) a `json` attribute in the [OpenAI specification](https://docs.litellm.ai/docs/completion/function_call) or (2) a numpy-style docstring, which lets us automatically calculate the json attribute using `litellm.utils.function_to_dict`.
+Here `web_search` should be a Python function with either (1) a `json` attribute in the [OpenAI specification](https://docs.litellm.ai/docs/completion/function_call) or (2) a numpy-style docstring, which lets us automatically calculate the json attribute using `litellm.utils.function_to_dict`.
+
+Tool-calling is not compatible with streaming. If your chat has tools, you can pass `chat.commit(enable_tools=False)` to temporarily disable tools for that AI call and enable streaming.

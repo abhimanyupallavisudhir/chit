@@ -89,7 +89,7 @@ class Chat:
             if not hasattr(self, 'messages') or new_id not in self.messages:
                 return new_id
 
-    def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None) -> str:
+    def commit(self, message: str | None = None, image_path: str | Path | None = None, role: str = None, enable_tools=True) -> str:
         if role is None: # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
             if current_role == "system":
@@ -135,9 +135,10 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            if hasattr(self, "tools_") and self.tools_ is not None:
+            if hasattr(self, "tools_") and self.tools_ is not None and enable_tools:
                 response = completion(model=self.model, messages=history, tools=self.tools_, tool_choice="auto", stream=False)
                 message = response.choices[0].message.content
+                print(message)
                 response_tool_calls: list[ChatCompletionMessageToolCall] | None = response.choices[
                     0
                 ].message.tool_calls
@@ -198,8 +199,8 @@ class Chat:
 
         if response_tool_calls:
             print(
-                f"{len(response_tool_calls)} tool calls requested; "
-                f"use {self.__name__}.commit() to call one-by-one"
+                f"{len(response_tool_calls)} tool calls pending; "
+                f"use .commit() to call one-by-one"
             )
 
         # return new_message.message["content"]
