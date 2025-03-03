@@ -23,10 +23,10 @@ See [example.ipynb](example.ipynb) for some demonstration, as well as [example2.
 Change the model by directly modifying the `model` attribute e.g.
 
 ```python
-chat.model = "claude-3-5-sonnet"
+chat.model = "openrouter/anthropic/claude-3.7-sonnet"
 ```
 
-We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions.
+We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions (very useful comprehensive list [here](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)).
 
 Vision is supported, including images from the clipboard like so: `chat.commit("Analyze this image.", image_path = '^V')`.
 
