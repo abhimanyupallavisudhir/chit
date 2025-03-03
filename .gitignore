@@ -4,6 +4,7 @@
 **/*.pyc
 **/*.pyo
 **/*.pyd
+.logs
 foo.json
 foo.html
 foo2.json

@@ -1,3 +1,4 @@
+import logging
 import tempfile
 import webbrowser
 import warnings
@@ -19,6 +20,7 @@ from litellm.types.utils import (
 )
 from litellm.types.utils import Message as ChatCompletionMessage
 
+LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class Message:
@@ -137,6 +139,7 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
+            LOGGER.debug(history)
             if hasattr(self, "tools_") and self.tools_ is not None and enable_tools:
                 response = completion(model=self.model, messages=history, tools=self.tools_, tool_choice="auto", stream=False)
                 message_full: ChatCompletionMessage = response.choices[0].message
@@ -152,7 +155,8 @@ class Chat:
                 message_full: ChatCompletionMessage = response.choices[0].message
         
         if role == "tool":
-            response_tool_calls = self[self.current_id].tool_calls
+            # when we pop tool calls, it should not modify previous history
+            response_tool_calls = self.current_message.tool_calls.copy()
             if not response_tool_calls:
                 raise ValueError("No tool calls requested to call")
             t: ChatCompletionMessageToolCall = response_tool_calls.pop(0)
@@ -200,7 +204,7 @@ class Chat:
         self.current_id = new_id
 
         if response_tool_calls:
-            print(
+            LOGGER.info(
                 f"{len(response_tool_calls)} tool calls pending; "
                 f"use .commit() to call one-by-one"
             )
