@@ -1,7 +1,6 @@
 from pathlib import Path
 import base64
 import mimetypes
-import re
 from urllib.parse import urlparse
 from PIL import ImageGrab  # for clipboard
 import requests

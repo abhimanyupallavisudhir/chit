@@ -1083,3 +1083,4 @@ class Chat:
             print(self._log_forum())
         elif style == "gui":
             self.gui()
+
