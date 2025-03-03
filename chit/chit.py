@@ -1,4 +1,3 @@
-import logging
 import tempfile
 import webbrowser
 import warnings
@@ -20,7 +19,12 @@ from litellm.types.utils import (
 )
 from litellm.types.utils import Message as ChatCompletionMessage
 
-LOGGER = logging.getLogger(__name__)
+CHIT_VERBOSE=True
+
+def chitverbose(*args, **kwargs):
+    """I can't get logging to print things in the right place in a notebook."""
+    if CHIT_VERBOSE:
+        print(*args, **kwargs)
 
 @dataclass
 class Message:
@@ -139,7 +143,6 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            LOGGER.debug(history)
             if hasattr(self, "tools_") and self.tools_ is not None and enable_tools:
                 response = completion(model=self.model, messages=history, tools=self.tools_, tool_choice="auto", stream=False)
                 message_full: ChatCompletionMessage = response.choices[0].message
@@ -204,9 +207,9 @@ class Chat:
         self.current_id = new_id
 
         if response_tool_calls:
-            LOGGER.info(
-                f"{len(response_tool_calls)} tool calls pending; "
-                f"use .commit() to call one-by-one"
+            chitverbose(
+                f"<<<{len(response_tool_calls)} tool calls pending; "
+                f"use .commit() to call one-by-one>>>"
             )
 
         # return new_message.message["content"]
