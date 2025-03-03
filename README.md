@@ -16,7 +16,7 @@ The `chit.Chat` class has methods:
 - `log()` for creating simple tree or forum style visualizations of the chat
 - `gui()` for creating a (non-interactive) html gui output of the conversation similar to a classic LLM interface
 
-See [example.ipynb](example.ipynb) for some demonstration, as well as [example2.ipynb](example2.ipynb) where we re-clone an earlier chat and play with it.
+See [example.ipynb](example.ipynb) for some demonstration, as well as [example2.ipynb](example2.ipynb) where we re-clone an earlier chat and play with it, and [example3.ipynb](example3.ipynb) for demonstrations with tool-calling.
 
 ## setting stuff
 
