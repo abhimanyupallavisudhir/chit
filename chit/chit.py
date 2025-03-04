@@ -74,7 +74,7 @@ class Chat:
         tools: list[callable] | None = None,
         remote: str | Remote | None = None,
         editor: str = "code",
-        autopush: bool = True,
+        autosave: bool = True,
     ):
         """
         Initialize a chit.Chat. Any of the below arguments can be set normally later i.e. self.editor = ...
@@ -89,12 +89,12 @@ class Chat:
                 `editor-name` for gui editors, e.g. `^N/code`.
                 `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
                 `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
-            autopush (bool): whether to automatically push to the remote after every change.
+            autosave (bool): whether to automatically push to the remote after every change.
         """
         self.model = model
         self.remote: Remote | None = remote
         self.editor = editor
-        self.autopush = autopush
+        self.autosave = autosave
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
 
@@ -137,6 +137,10 @@ class Chat:
         if isinstance(value, str):
             value = Remote(json_file=value)
         self._remote = value
+
+    def backup(self):
+        if self.autosave and self.remote is not None:
+            self.push()
 
     def _recalc_tools(self):
         if self.tools is not None:
@@ -298,6 +302,8 @@ class Chat:
                 f"<<<{len(response_tool_calls)} tool calls pending; "
                 f"use .commit() to call one-by-one>>>"
             )
+        
+        self.backup()
 
         # return new_message.message["content"]
 
@@ -339,6 +345,8 @@ class Chat:
                 self.current_id == old_id
             )  # since we just created the branch, it should be the same as before
 
+        self.backup()
+        
     def _resolve_forward_path(
         self, branch_path: list[str], start_id: Optional[str] = None
     ) -> str:
@@ -427,6 +435,8 @@ class Chat:
             self.current_branch = branch_name
         else:
             self.current_branch = self.messages[self.current_id].home_branch
+        
+        self.backup()
 
     def _get_message_history(self) -> list[dict[str, str]]:
         """Reconstruct message history from current point back to root"""
@@ -757,6 +767,7 @@ class Chat:
             self._rm_commit(commit_id)
         elif branch_name is not None:
             self._rm_branch(branch_name)
+        self.backup()
 
     def mv(self, branch_name_old: str, branch_name_new: str) -> None:
         """Rename a branch throughout the tree."""
@@ -780,6 +791,8 @@ class Chat:
         # Update current_branch if needed
         if self.current_branch == branch_name_old:
             self.current_branch = branch_name_new
+        
+        self.backup()
 
     def find(
         self,

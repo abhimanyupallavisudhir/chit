@@ -7,7 +7,7 @@ The `chit.Chat` class has methods:
 - `commit()` for adding new messages (either user or assistant). For creating an assistant message, the message path leading from the root to the current checked-out message is sent to the LLM.
 - `branch()` for creating a new branch at the current checked-out message
 - `checkout()` for changing the checkout message. 
-- `push()` for dumping pushing to a `Remote` (a json file + an html gui visualization)
+- `push()` for dumping to a `Remote` (a json file + an html gui visualization) -- note that this will *not* preserve chat settings like the list of tools.
 - `clone()` a classmethod for initializing a `chit.Chat` object from a json file
 - sensible indexing and slicing
 - `rm()` for removing a branch or commit
