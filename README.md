@@ -41,6 +41,24 @@ Here `web_search` should be a Python function with either (1) a `json` attribute
 
 Tool-calling is not compatible with streaming. If your chat has tools, you can pass `chat.commit(enable_tools=False)` to temporarily disable tools for that AI call and enable streaming.
 
+One convenient util is `chit.read()`, which makes it convenient to paste local file contents into your prompt, i.e.
+
+```python
+import chit
+from chit import read
+
+chat = chit.Chat()
+
+chat.commit(
+f"""
+Analyze and review the folowing code:
+
+{read("chit/chit.py")}
+"""
+)
+chat.commit()
+```
+
 ## imports
 
 We have a (probably very rudimentary) importer function for Claude exports, used as follows:

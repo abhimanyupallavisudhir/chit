@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from chit import Chat, Message
+from chit import Chat, ChitMessage
 from chit.images import prepare_image_message
 
 from litellm.types.utils import (
@@ -103,7 +103,7 @@ def import_claude(claude_export_path: str | Path, system_prompt: str = None) -> 
             tool_calls = _extract_claude_tools(msg["content"])
         
         # Create new message
-        new_message = Message(
+        new_message = ChitMessage(
             id=message_id,
             message={"role": role, "content": content},
             children={branch_name: None},  # Will connect any children in subsequent iterations

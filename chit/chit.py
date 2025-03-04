@@ -27,9 +27,12 @@ def chitverbose(*args, **kwargs):
     if CHIT_VERBOSE:
         print(*args, **kwargs)
 
+def read(file_path: str | Path) -> str:
+    with open(file_path, "r") as f:
+        return f.read()
 
 @dataclass
-class Message:
+class ChitMessage:
     id: str
     message: dict[str, str] | ChatCompletionMessage
     children: dict[str, Optional[str]]  # branch_name -> child_id
@@ -74,8 +77,8 @@ class Chat:
         self.root_id = initial_id  # Store the root message ID
 
         # Initialize with system message
-        self.messages: dict[str, Message] = {
-            initial_id: Message(
+        self.messages: dict[str, ChitMessage] = {
+            initial_id: ChitMessage(
                 id=initial_id,
                 message={"role": "system", "content": "You are a helpful assistant."},
                 children={"master": None},
@@ -225,7 +228,7 @@ class Chat:
                 }
 
         # Create new message
-        new_message = Message(
+        new_message = ChitMessage(
             id=new_id,
             message=message_full,
             tool_calls=response_tool_calls,
@@ -394,7 +397,7 @@ class Chat:
 
     def __getitem__(
         self, key: str | int | list[str] | slice
-    ) -> Message | list[Message]:
+    ) -> ChitMessage | list[ChitMessage]:
         # Handle string indices (commit IDs)
         if isinstance(key, str):
             if key not in self.messages:
@@ -468,7 +471,7 @@ class Chat:
 
         chat = cls(model=data["model"])
         chat.remote = remote  # Set remote automatically when cloning
-        chat.messages = {k: Message(**v) for k, v in data["messages"].items()}
+        chat.messages = {k: ChitMessage(**v) for k, v in data["messages"].items()}
         chat.current_id = data["current_id"]
         chat.current_branch = data["current_branch"]
         chat.root_id = data["root_id"]
@@ -716,7 +719,7 @@ class Chat:
         max_results: Optional[int] = None,
         regex: bool = False,
         context: int = 0,  # Number of messages before/after to include
-    ) -> list[dict[str, Message | list[Message]]]:
+    ) -> list[dict[str, ChitMessage | list[ChitMessage]]]:
         """
         Search for messages matching the pattern.
 
@@ -795,7 +798,7 @@ class Chat:
         """Helper function for Chat.log()"""
         log_lines: list[str] = []
         log_lines.append(self._process_commit_id(frontier_id))
-        frontier: Message = self.messages[frontier_id]
+        frontier: ChitMessage = self.messages[frontier_id]
 
         horizontal_pos: int = len(log_lines[0])  # position where stuff should be added
 
@@ -876,7 +879,7 @@ class Chat:
 
     def _log_forum_draw_from(self, frontier_id: str) -> list[str]:
         log_lines: list[str] = []
-        frontier: Message = self[frontier_id]
+        frontier: ChitMessage = self[frontier_id]
         log_lines.append(
             f"{self._process_commit_id(frontier_id)}: {self._process_message_content(frontier.message['content'])}"
         )
