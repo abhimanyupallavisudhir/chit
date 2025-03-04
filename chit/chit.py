@@ -77,7 +77,7 @@ class Chat:
         autopush: bool = True,
     ):
         """
-        Initialize a chit.Chat.
+        Initialize a chit.Chat. Any of the below arguments can be set normally later i.e. self.editor = ...
 
         Arguments:
             model (str): model name, in the [LiteLLM specification](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
@@ -92,8 +92,6 @@ class Chat:
             autopush (bool): whether to automatically push to the remote after every change.
         """
         self.model = model
-        if isinstance(remote, str):
-            remote = Remote(json_file=remote)
         self.remote: Remote | None = remote
         self.editor = editor
         self.autopush = autopush
@@ -119,7 +117,26 @@ class Chat:
         self.branch_tips: dict[str, str] = {"master": initial_id}
 
         self.tools: list[callable] | None = tools
+
+    @property
+    def tools(self) -> list[callable] | None:
+        # not to be confused with self.tools_, which is a list of tool jsons
+        return self._tools
+    
+    @tools.setter
+    def tools(self, value):
+        self._tools = value
         self._recalc_tools()
+
+    @property
+    def remote(self) -> Remote | None:
+        return self._remote
+    
+    @remote.setter
+    def remote(self, value):
+        if isinstance(value, str):
+            value = Remote(json_file=value)
+        self._remote = value
 
     def _recalc_tools(self):
         if self.tools is not None:

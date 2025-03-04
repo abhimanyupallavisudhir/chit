@@ -34,11 +34,10 @@ Vision is supported, including images from the clipboard like so: `chat.commit("
 
 ## tool use
 
-Change tools by modifying the `tools` attribute (which is a list of functions), then **calling `recalc_tools()`**, i.e.
+Change tools by modifying the `tools` attribute (which is a list of functions):
 
 ```python
 chat.tools.append(web_search)
-chat._recalc_tools()
 ```
 
 Here `web_search` should be a Python function with either (1) a `json` attribute in the [OpenAI specification](https://docs.litellm.ai/docs/completion/function_call) or (2) a numpy-style docstring, which lets us automatically calculate the json attribute using `litellm.utils.function_to_dict`.
