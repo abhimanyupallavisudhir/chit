@@ -164,6 +164,18 @@ class Chat:
             # Ensure it doesn't already exist in our messages
             if not hasattr(self, "messages") or new_id not in self.messages:
                 return new_id
+            
+    def _generate_new_branch_name(self, branch_name: str) -> str:
+        """Generate a new branch name based on the current branch name"""
+        import re
+        new_branch_name = branch_name
+        while new_branch_name in self.branch_tips:
+            match = re.match(r"^(.+)_(\d+)$", new_branch_name)
+            if match:
+                new_branch_name = f"{match.group(1)}_{int(match.group(2)) + 1}"
+            else:
+                new_branch_name = f"{new_branch_name}_1"
+        return new_branch_name
 
     def commit(
         self,
@@ -202,9 +214,12 @@ class Chat:
 
         # check that checked-out message does not already have a child in the checked-out branch
         if existing_child_id is not None:
-            raise ValueError(
-                f"Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. Kill it first with chit.Chat.rm()"
+            new_branch_name = self._generate_new_branch_name(self.current_branch)
+            cprint(
+                f"WARNING: Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. "
+                f"Creating new branch {new_branch_name} to avoid overwriting."
             )
+            self.branch(new_branch_name, checkout=True)
 
         new_id = self._generate_short_id()
 
