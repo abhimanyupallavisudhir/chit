@@ -12,6 +12,7 @@ The `chit.Chat` class has methods:
 - sensible indexing and slicing
 - `rm()` for removing a branch or commit
 - `mv()` for renaming a branch
+- `show()` for showing a particular message (by commit ID, or any form of indexing)
 - `find()` for finding in conversation history
 - `log()` for creating simple tree or forum style visualizations of the chat
 - `gui()` for creating a (non-interactive) html gui output of the conversation similar to a classic LLM interface

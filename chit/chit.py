@@ -395,6 +395,10 @@ class Chat:
 
         self.backup()
 
+    def show(self, message_id: str) -> None:
+        """Print the content of a message."""
+        print(self[message_id].message["content"])
+
     def _resolve_forward_path(
         self, branch_path: list[str], start_id: Optional[str] = None
     ) -> str:
