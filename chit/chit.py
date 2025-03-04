@@ -21,13 +21,20 @@ from litellm.types.utils import (
 )
 from litellm.types.utils import Message as ChatCompletionMessage
 
-CHIT_VERBOSE = True
+VERBOSE = True
+FORCE = False
 
-
-def chitverbose(*args, **kwargs):
+def cprint(*args, **kwargs):
     """I can't get logging to print things in the right place in a notebook."""
-    if CHIT_VERBOSE:
+    if VERBOSE:
         print(*args, **kwargs)
+
+def cconfirm(prompt: str) -> bool:
+    """Prompt the user to confirm an action."""
+    if not FORCE:
+        response = input(f"{prompt} (y/n) ")
+        return response.lower() == "y"
+    return True
 
 def read(file_path: str | Path) -> str:
     with open(file_path, "r") as f:
@@ -173,9 +180,11 @@ class Chat:
         role: str = None,
         enable_tools=True,
     ) -> str:
-        if message == "^N":
-            message = self._capture_editor_content()
-            # self.commit(message=content, role=role, **kwargs)
+        if message and message.startswith("^N"):
+            # Parse editor specification
+            parts = message.split("/", 1)
+            editor_spec = parts[1] if len(parts) > 1 else None
+            message = self._capture_editor_content(editor_spec)
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
             if current_role == "system":
@@ -298,7 +307,7 @@ class Chat:
         self.current_id = new_id
 
         if response_tool_calls:
-            chitverbose(
+            cprint(
                 f"<<<{len(response_tool_calls)} tool calls pending; "
                 f"use .commit() to call one-by-one>>>"
             )
@@ -307,22 +316,52 @@ class Chat:
 
         # return new_message.message["content"]
 
-    def _capture_editor_content(self):
-        """Open text editor and capture content when user is done."""
-        # Create temp file
+    def _capture_editor_content(self, editor_spec=None):
+        """
+        Open editor and capture content based on editor specification.
+        
+        Editor spec formats:
+        - None: use self.editor default
+        - "code", "gnome-text-editor", etc: GUI editor
+        - "gnome-terminal$vim", "xterm$nano": terminal$editor
+        - "$jupyter": use Jupyter text area
+        """
+        if editor_spec is None:
+            editor_spec = self.editor
+            
         with tempfile.NamedTemporaryFile(suffix=".txt", mode='w', delete=False) as f:
             temp_path = f.name
         
-        editor = os.environ.get('EDITOR', 'code')
-        os.system(f"{editor} {temp_path}")
+        if editor_spec == "$jupyter":
+            # Use IPython widgets if available
+            try:
+                import ipywidgets as widgets
+                from IPython.display import display
+                
+                text_area = widgets.Textarea(
+                    placeholder='Type your message here...',
+                    layout=widgets.Layout(width='100%', height='200px')
+                )
+                display(text_area)
+                content = input("Type your message in the text area above and press Enter here when done... ")
+                return content or text_area.value
+                
+            except ImportError:
+                raise ValueError("$jupyter specified but not in a Jupyter environment")
+                
+        elif '$' in editor_spec:
+            # Terminal-based editor
+            terminal, editor = editor_spec.split('$')
+            os.system(f'{terminal} -- {editor} {temp_path}')
+        else:
+            # GUI editor
+            os.system(f"{editor_spec} {temp_path}")
         
-        input("Press Enter when you're done editing... ")  # Wait for user
+        input("Press Enter when you're done editing... ")
         
-        # Now read the result
         with open(temp_path, 'r') as f:
             content = f.read()
         
-        # Clean up
         os.unlink(temp_path)
         
         if content.strip():
@@ -384,8 +423,8 @@ class Chat:
 
         return current
 
-    def _resolve_positive_index(self, index: int) -> str:
-        """Convert positive index to message ID by following master branch from root"""
+    def _resolve_nonnegative_index(self, index: int) -> str:
+        """Convert positive or zero index to message ID by following master branch from root"""
         if index < 0:
             raise ValueError("This method only handles non-negative indices")
 
@@ -411,7 +450,7 @@ class Chat:
         if message_id is not None:
             if isinstance(message_id, int):
                 if message_id >= 0:
-                    message_id = self._resolve_positive_index(message_id)
+                    message_id = self._resolve_nonnegative_index(message_id)
                 else:
                     message_id = self._resolve_negative_index(message_id)
             elif isinstance(message_id, list):
@@ -484,7 +523,7 @@ class Chat:
         # Handle integer indices
         if isinstance(key, int):
             if key >= 0:
-                return self.messages[self._resolve_positive_index(key)]
+                return self.messages[self._resolve_nonnegative_index(key)]
             return self.messages[self._resolve_negative_index(key)]
 
         # Handle forward traversal via branch path
@@ -502,7 +541,7 @@ class Chat:
             start_id = None
             if isinstance(key.start, int):
                 if key.start >= 0:
-                    start_id = self._resolve_positive_index(key.start)
+                    start_id = self._resolve_nonnegative_index(key.start)
                 else:
                     start_id = self._resolve_negative_index(key.start)
             elif isinstance(key.start, list):
@@ -513,7 +552,7 @@ class Chat:
             stop_id = None
             if isinstance(key.stop, int):
                 if key.stop >= 0:
-                    stop_id = self._resolve_positive_index(key.stop)
+                    stop_id = self._resolve_nonnegative_index(key.stop)
                 else:
                     stop_id = self._resolve_negative_index(key.stop)
             elif isinstance(key.stop, list):
@@ -541,8 +580,10 @@ class Chat:
         raise TypeError(f"Invalid key type: {type(key)}")
 
     @classmethod
-    def clone(cls, remote: str) -> "Chat":
+    def clone(cls, remote: str | Remote) -> "Chat":
         """Create new Chat instance from remote file"""
+        if isinstance(remote, Remote):
+            remote: str = remote.json_file
         with open(remote, "r") as f:
             data = json.load(f)
 
@@ -751,14 +792,16 @@ class Chat:
         return
 
     def rm(
-        self, commit_id: str | None = None, branch_name: str | None = None, force=False
+        self, commit_id: str | int | None = None, branch_name: str | None = None
     ) -> None:
-        if not force:
-            confirm = input(
-                f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}? (y/n) "
-            )
-            if confirm.lower() != "y":
-                return
+        if isinstance(commit_id, int):
+            # allow negative and positive indices
+            if commit_id > 0:
+                commit_id = self._resolve_nonnegative_index(commit_id)
+            else:
+                commit_id = self._resolve_negative_index(commit_id)
+        if not cconfirm(f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}?"):
+            return
         if commit_id is not None:
             if branch_name is not None:
                 raise ValueError(

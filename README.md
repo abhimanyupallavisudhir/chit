@@ -75,6 +75,16 @@ chat.commit("^N") # opens up a temporary file in VS Code
 chat.commit()
 ```
 
+## indexing
+
+`chit.Chat` objects support indexing (and slicing) by:
+- commit IDs, i.e. `chat['1adca2f6']`
+- negative integers, i.e. where `chat[-1]` is the currently checked-out message and you traverse backward from there
+- lists, i.e. `chat[["master", "master"]]` to do forward traversal from the currently checked-out message, specifying the branch to choose at each step
+- nonnegative integers, i.e. where `chat[0]` is the system message and you traverse forward along the master branch
+
+This also applies to e.g. `rm()`.
+
 ## imports
 
 We have a (probably very rudimentary) importer function for Claude exports, used as follows:
@@ -90,7 +100,8 @@ chat = import_claude("claude.json")
 ## TODO
 
 - [ ] improve `^N` input
-- [ ] autosave feature
+- [ ] make pushing and cloning preserve as much as possible
+- [x] autosave feature
 - [ ] fix html visualization issue
 - [ ] cleanup this repo
 - [ ] html gui improvements
@@ -98,3 +109,4 @@ chat = import_claude("claude.json")
     - [ ] forum-like gui
     - [ ] footer saying made with chit
     - [ ] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
+- [ ] add imports from chatgpt, deepseek, xai, gemini, various LLM frontends etc. (only claude currently implemented)
