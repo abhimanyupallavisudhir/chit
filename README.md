@@ -87,3 +87,15 @@ chat = import_claude("claude.json")
 ```
 
 [Here](https://www.reddit.com/r/ClaudeAI/comments/1ciitou/any_good_tools_for_exporting_chats/) is how you get a Claude export (for a particular chat) -- do *not* use the default Claude data dump in account settings (this does not preserve tree structure); instead load the Claude chat with `Chrome Dev Tools > Network` open and find the correct resource.
+
+## TODO
+
+- [ ] improve `^N` input
+- [ ] autosave feature
+- [ ] fix html visualization issue
+- [ ] cleanup this repo
+- [ ] html gui improvements
+    - [ ] i3-like gui
+    - [ ] forum-like gui
+    - [ ] footer saying made with chit
+    - [ ] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
