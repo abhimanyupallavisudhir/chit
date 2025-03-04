@@ -72,9 +72,31 @@ class Chat:
         self,
         model: str = "openrouter/anthropic/claude-3.7-sonnet",
         tools: list[callable] | None = None,
+        remote: str | Remote | None = None,
+        editor: str = "code",
+        autopush: bool = True,
     ):
+        """
+        Initialize a chit.Chat.
+
+        Arguments:
+            model (str): model name, in the [LiteLLM specification](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
+            tools (list[callable]): list of tools available to the assistant. NOTE:
+                - if you use this, streaming will be turned off. You can still pass `enable_tools=False` to `commit()` to disable tools for a single commit.
+                - each tool should be a function which either has a `json` attribute of type dict, or has a numpydoc docstring.
+            remote (str or Remote): path to a json file to save the chat history to, or a chit.Remote object with json_file and html_file attributes.
+            editor (str): text editor to use for user input if user message is `^N`.
+                `editor-name` for gui editors, e.g. `^N/code`.
+                `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
+                `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
+            autopush (bool): whether to automatically push to the remote after every change.
+        """
         self.model = model
-        self.remote = None  # just set this manually e.g. chat.remote = Remote(file.json, file.html)
+        if isinstance(remote, str):
+            remote = Remote(json_file=remote)
+        self.remote: Remote | None = remote
+        self.editor = editor
+        self.autopush = autopush
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
 
@@ -970,7 +992,7 @@ class Chat:
             file_path: Optional path where the HTML file should be saved.
                     If None, creates a temporary file instead.
         """
-        html_content = self._generate_viz_html()
+        html_content = self._generate_viz_html(title=file_path or "chit conversation")
 
         if file_path is not None:
             # Convert to Path object if string
@@ -1005,7 +1027,7 @@ class Chat:
             "root_id": self.root_id,
         }
 
-    def _generate_viz_html(self) -> str:
+    def _generate_viz_html(self, title: str = "chit conversation") -> str:
         """Generate the HTML for visualization."""
         data = self._prepare_messages_for_viz()
 
@@ -1013,7 +1035,7 @@ class Chat:
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Chit conversation</title>
+        <title>{title}</title>
         <meta charset="UTF-8">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
