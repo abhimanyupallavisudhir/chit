@@ -2,7 +2,7 @@ import tempfile
 import webbrowser
 import warnings
 from dataclasses import dataclass
-from typing import Dict, Optional, Pattern, Any, Literal
+from typing import Optional, Pattern, Any, Literal
 from pathlib import Path
 import json
 import re
@@ -31,8 +31,8 @@ def chitverbose(*args, **kwargs):
 @dataclass
 class Message:
     id: str
-    message: Dict[str, str]
-    children: Dict[str, Optional[str]]  # branch_name -> child_id
+    message: dict[str, str] | ChatCompletionMessage
+    children: dict[str, Optional[str]]  # branch_name -> child_id
     parent_id: Optional[str]
     home_branch: str
     tool_calls: list[ChatCompletionMessageToolCall] | None = None
@@ -40,6 +40,20 @@ class Message:
     @property
     def heir_id(self):
         return self.children[self.home_branch]
+
+    def dict(self):
+        return {
+            "id": self.id,
+            "message": self.message
+            if isinstance(self.message, dict)
+            else self.message.json(),
+            "children": self.children,
+            "parent_id": self.parent_id,
+            "home_branch": self.home_branch,
+            "tool_calls": [tool_call.to_dict() for tool_call in self.tool_calls]
+            if self.tool_calls is not None
+            else None,
+        }
 
 
 @dataclass
@@ -51,7 +65,7 @@ class Remote:
 class Chat:
     def __init__(
         self,
-        model: str = "openrouter/deepseek/deepseek-chat",
+        model: str = "openrouter/anthropic/claude-3.7-sonnet",
         tools: list[callable] | None = None,
     ):
         self.model = model
@@ -60,7 +74,7 @@ class Chat:
         self.root_id = initial_id  # Store the root message ID
 
         # Initialize with system message
-        self.messages: Dict[str, Message] = {
+        self.messages: dict[str, Message] = {
             initial_id: Message(
                 id=initial_id,
                 message={"role": "system", "content": "You are a helpful assistant."},
@@ -75,7 +89,7 @@ class Chat:
         # Track latest message for each branch
         # maps each branch name to the latest message that includes
         # that branch in its children attribute's keys
-        self.branch_tips: Dict[str, str] = {"master": initial_id}
+        self.branch_tips: dict[str, str] = {"master": initial_id}
 
         self.tools: list[callable] | None = tools
         self._recalc_tools()
@@ -364,7 +378,7 @@ class Chat:
         if self.remote.json_file is not None:
             data = {
                 "model": self.model,
-                "messages": {k: vars(v) for k, v in self.messages.items()},
+                "messages": {k: v.dict() for k, v in self.messages.items()},
                 "current_id": self.current_id,
                 "current_branch": self.current_branch,
                 "root_id": self.root_id,
@@ -939,13 +953,13 @@ class Chat:
                 temp_path = f.name
             webbrowser.open(f"file://{temp_path}")
 
-    def _prepare_messages_for_viz(self) -> Dict[str, Any]:
+    def _prepare_messages_for_viz(self) -> dict[str, Any]:
         """Convert messages to a format suitable for visualization."""
         return {
             "messages": {
                 k: {
                     "id": m.id,
-                    "message": m.message,
+                    "message": m.message if isinstance(m.message, dict) else m.message.json(),
                     "children": m.children,
                     "parent_id": m.parent_id,
                     "home_branch": m.home_branch,
@@ -964,7 +978,7 @@ class Chat:
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Chat Visualization</title>
+        <title>Chit conversation</title>
         <meta charset="UTF-8">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
