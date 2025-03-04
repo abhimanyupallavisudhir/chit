@@ -378,7 +378,7 @@ class Chat:
         else:
             raise ValueError("No content added to editor")
 
-    def branch(self, branch_name: str, checkout: bool = False) -> None:
+    def branch(self, branch_name: str, checkout: bool = True) -> None:
         if branch_name in self.branch_tips:
             raise ValueError(
                 f"Branch '{branch_name}' already exists (latest at message {self.branch_tips[branch_name]})"
@@ -1020,6 +1020,7 @@ class Chat:
                     break
         else:
             content_proc = content
+        content_proc = content_proc.replace("\n", r"\\")
         content_proc = content_proc[:57] + "..."
         return content_proc
 
