@@ -1020,8 +1020,7 @@ class Chat:
                     break
         else:
             content_proc = content
-        content_proc = content_proc.replace("\n", r"\\")
-        content_proc = content_proc[:57] + "..."
+        content_proc = content_proc.replace("\n", r" ").strip()[:57] + "..."
         return content_proc
 
     def _log_forum_draw_from(self, frontier_id: str) -> list[str]:
