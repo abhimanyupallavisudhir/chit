@@ -22,12 +22,38 @@ from litellm.types.utils import (
 from litellm.types.utils import Message as ChatCompletionMessage
 
 VERBOSE = True
+"""
+default: True
+enables informational print statements from chit apart from chat responses
+(e.g. telling you how many tool calls are expected to be calculated)
+"""
+
 FORCE = False
+"""
+default: False
+disables asking for confirmation before removing commits and branches
+"""
+
+AUTOSAVE = True
+"""
+default: True
+automatically pushes to the Remote, if one is set, after every commit or other change
+"""
+
+EDITOR = "code"
+"""
+default text editor to use for user input if user message is `^N` with no further suffix:
+    `editor-name` for gui editors, e.g. `^N/code`.
+    `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
+    `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
+"""
+
 
 def cprint(*args, **kwargs):
     """I can't get logging to print things in the right place in a notebook."""
     if VERBOSE:
         print(*args, **kwargs)
+
 
 def cconfirm(prompt: str) -> bool:
     """Prompt the user to confirm an action."""
@@ -36,9 +62,11 @@ def cconfirm(prompt: str) -> bool:
         return response.lower() == "y"
     return True
 
+
 def read(file_path: str | Path) -> str:
     with open(file_path, "r") as f:
         return f.read()
+
 
 @dataclass
 class ChitMessage:
@@ -80,11 +108,9 @@ class Chat:
         model: str = "openrouter/anthropic/claude-3.7-sonnet",
         tools: list[callable] | None = None,
         remote: str | Remote | None = None,
-        editor: str = "code",
-        autosave: bool = True,
     ):
         """
-        Initialize a chit.Chat. Any of the below arguments can be set normally later i.e. self.editor = ...
+        Initialize a chit.Chat. Any of the below attributes can be set normally later, e.g. `chat.remote = ...`.
 
         Arguments:
             model (str): model name, in the [LiteLLM specification](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
@@ -92,16 +118,9 @@ class Chat:
                 - if you use this, streaming will be turned off. You can still pass `enable_tools=False` to `commit()` to disable tools for a single commit.
                 - each tool should be a function which either has a `json` attribute of type dict, or has a numpydoc docstring.
             remote (str or Remote): path to a json file to save the chat history to, or a chit.Remote object with json_file and html_file attributes.
-            editor (str): text editor to use for user input if user message is `^N`.
-                `editor-name` for gui editors, e.g. `^N/code`.
-                `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
-                `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
-            autosave (bool): whether to automatically push to the remote after every change.
         """
         self.model = model
         self.remote: Remote | None = remote
-        self.editor = editor
-        self.autosave = autosave
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
 
@@ -129,7 +148,7 @@ class Chat:
     def tools(self) -> list[callable] | None:
         # not to be confused with self.tools_, which is a list of tool jsons
         return self._tools
-    
+
     @tools.setter
     def tools(self, value):
         self._tools = value
@@ -138,7 +157,7 @@ class Chat:
     @property
     def remote(self) -> Remote | None:
         return self._remote
-    
+
     @remote.setter
     def remote(self, value):
         if isinstance(value, str):
@@ -146,7 +165,7 @@ class Chat:
         self._remote = value
 
     def backup(self):
-        if self.autosave and self.remote is not None:
+        if AUTOSAVE and self.remote is not None:
             self.push()
 
     def _recalc_tools(self):
@@ -182,8 +201,7 @@ class Chat:
     ) -> str:
         if message and message.startswith("^N"):
             # Parse editor specification
-            parts = message.split("/", 1)
-            editor_spec = parts[1] if len(parts) > 1 else None
+            editor_spec = message[2:].strip("/ ")
             message = self._capture_editor_content(editor_spec)
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
@@ -311,7 +329,7 @@ class Chat:
                 f"<<<{len(response_tool_calls)} tool calls pending; "
                 f"use .commit() to call one-by-one>>>"
             )
-        
+
         self.backup()
 
         # return new_message.message["content"]
@@ -319,51 +337,53 @@ class Chat:
     def _capture_editor_content(self, editor_spec=None):
         """
         Open editor and capture content based on editor specification.
-        
+
         Editor spec formats:
         - None: use self.editor default
         - "code", "gnome-text-editor", etc: GUI editor
         - "gnome-terminal$vim", "xterm$nano": terminal$editor
         - "$jupyter": use Jupyter text area
         """
-        if editor_spec is None:
-            editor_spec = self.editor
-            
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode='w', delete=False) as f:
+        if not editor_spec:
+            editor_spec = EDITOR
+
+        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False) as f:
             temp_path = f.name
-        
+
         if editor_spec == "$jupyter":
             # Use IPython widgets if available
             try:
                 import ipywidgets as widgets
                 from IPython.display import display
-                
+
                 text_area = widgets.Textarea(
-                    placeholder='Type your message here...',
-                    layout=widgets.Layout(width='100%', height='200px')
+                    placeholder="Type your message here...",
+                    layout=widgets.Layout(width="100%", height="200px"),
                 )
                 display(text_area)
-                content = input("Type your message in the text area above and press Enter here when done... ")
-                return content or text_area.value
-                
+                content = input(
+                    "Type your message in the text area given and press Enter here when done... "
+                )
+                return text_area.value
+
             except ImportError:
                 raise ValueError("$jupyter specified but not in a Jupyter environment")
-                
-        elif '$' in editor_spec:
+
+        elif "$" in editor_spec:
             # Terminal-based editor
-            terminal, editor = editor_spec.split('$')
-            os.system(f'{terminal} -- {editor} {temp_path}')
+            terminal, editor = editor_spec.split("$")
+            os.system(f"{terminal} -- {editor} {temp_path}")
         else:
             # GUI editor
             os.system(f"{editor_spec} {temp_path}")
-        
+
         input("Press Enter when you're done editing... ")
-        
-        with open(temp_path, 'r') as f:
+
+        with open(temp_path, "r") as f:
             content = f.read()
-        
+
         os.unlink(temp_path)
-        
+
         if content.strip():
             return content
         else:
@@ -385,7 +405,7 @@ class Chat:
             )  # since we just created the branch, it should be the same as before
 
         self.backup()
-        
+
     def _resolve_forward_path(
         self, branch_path: list[str], start_id: Optional[str] = None
     ) -> str:
@@ -474,7 +494,7 @@ class Chat:
             self.current_branch = branch_name
         else:
             self.current_branch = self.messages[self.current_id].home_branch
-        
+
         self.backup()
 
     def _get_message_history(self) -> list[dict[str, str]]:
@@ -722,7 +742,6 @@ class Chat:
         """Remove all messages associated with a branch."""
         # Check if we're trying to remove current branch or home branch
         self.checkout(*self._check_kalidasa_branch(branch_name))
-        
 
         # First pass: identify messages to delete and clean up their parent references
         to_delete = set()
@@ -800,7 +819,9 @@ class Chat:
                 commit_id = self._resolve_nonnegative_index(commit_id)
             else:
                 commit_id = self._resolve_negative_index(commit_id)
-        if not cconfirm(f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}?"):
+        if not cconfirm(
+            f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}?"
+        ):
             return
         if commit_id is not None:
             if branch_name is not None:
@@ -834,7 +855,7 @@ class Chat:
         # Update current_branch if needed
         if self.current_branch == branch_name_old:
             self.current_branch = branch_name_new
-        
+
         self.backup()
 
     def find(
@@ -1089,7 +1110,9 @@ class Chat:
             "messages": {
                 k: {
                     "id": m.id,
-                    "message": m.message if isinstance(m.message, dict) else m.message.json(),
+                    "message": m.message
+                    if isinstance(m.message, dict)
+                    else m.message.json(),
                     "children": m.children,
                     "parent_id": m.parent_id,
                     "home_branch": m.home_branch,

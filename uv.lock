@@ -319,6 +319,7 @@ version = "1.6.0"
 source = { virtual = "." }
 dependencies = [
     { name = "ipykernel" },
+    { name = "ipython" },
     { name = "ipywidgets" },
     { name = "litellm" },
     { name = "numpydoc" },
@@ -328,6 +329,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "ipython", specifier = ">=8.32.0" },
     { name = "ipywidgets", specifier = ">=8.1.5" },
     { name = "litellm", specifier = ">=1.61.15" },
     { name = "numpydoc", specifier = ">=1.8.0" },
