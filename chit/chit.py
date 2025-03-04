@@ -21,34 +21,6 @@ from litellm.types.utils import (
 )
 from litellm.types.utils import Message as ChatCompletionMessage
 
-VERBOSE = True
-"""
-default: True
-enables informational print statements from chit apart from chat responses
-(e.g. telling you how many tool calls are expected to be calculated)
-"""
-
-FORCE = False
-"""
-default: False
-disables asking for confirmation before removing commits and branches
-"""
-
-AUTOSAVE = True
-"""
-default: True
-automatically pushes to the Remote, if one is set, after every commit or other change
-"""
-
-EDITOR = "code"
-"""
-default text editor to use for user input if user message is `^N` with no further suffix:
-    `editor-name` for gui editors, e.g. `^N/code`.
-    `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
-    `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
-"""
-
-
 def cprint(*args, **kwargs):
     """I can't get logging to print things in the right place in a notebook."""
     if VERBOSE:
@@ -202,6 +174,7 @@ class Chat:
         if message and message.startswith("^N"):
             # Parse editor specification
             editor_spec = message[2:].strip("/ ")
+            print(editor_spec)
             message = self._capture_editor_content(editor_spec)
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
