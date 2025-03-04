@@ -13,6 +13,7 @@ import random
 import litellm
 from litellm import completion, stream_chunk_builder
 from chit.images import prepare_image_message
+import chit.config
 
 from litellm.types.utils import (
     # ModelResponse,
@@ -23,13 +24,13 @@ from litellm.types.utils import Message as ChatCompletionMessage
 
 def cprint(*args, **kwargs):
     """I can't get logging to print things in the right place in a notebook."""
-    if VERBOSE:
+    if chit.config.VERBOSE:
         print(*args, **kwargs)
 
 
 def cconfirm(prompt: str) -> bool:
     """Prompt the user to confirm an action."""
-    if not FORCE:
+    if not chit.config.FORCE:
         response = input(f"{prompt} (y/n) ")
         return response.lower() == "y"
     return True
@@ -137,7 +138,7 @@ class Chat:
         self._remote = value
 
     def backup(self):
-        if AUTOSAVE and self.remote is not None:
+        if chit.config.AUTOSAVE and self.remote is not None:
             self.push()
 
     def _recalc_tools(self):
@@ -318,7 +319,7 @@ class Chat:
         - "$jupyter": use Jupyter text area
         """
         if not editor_spec:
-            editor_spec = EDITOR
+            editor_spec = chit.config.EDITOR
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False) as f:
             temp_path = f.name
@@ -760,9 +761,12 @@ class Chat:
         self.checkout(*self._check_kalidasa_commit(commit_id))
 
         # kill all children
-        for child_id in message.children.values():
+        for child_branch, child_id in message.children.items():
             if child_id is not None:
                 self._rm_commit(child_id)
+            if child_branch != message.home_branch:
+                # this is a branch that doesn't exist anywhere else, so it must be removed
+                self.branch_tips.pop(child_branch, None)
 
         # Update parent's children
         if message.parent_id is not None:
@@ -771,12 +775,14 @@ class Chat:
                 if child_id == commit_id:
                     parent.children[branch] = None
 
-        # Update branch_tips
-        self.branch_tips = {
-            branch: tip_id
-            for branch, tip_id in self.branch_tips.items()
-            if tip_id != commit_id
-        }
+
+        for branch, tip_id in self.branch_tips.items():
+            if tip_id == commit_id:
+                # if parent is also in the same branch, that's the new tip
+                if self[message.parent_id].home_branch == branch:
+                    self.branch_tips[branch] = message.parent_id
+                else:
+                    del self.branch_tips[branch]
 
         # Delete the message
         del self.messages[commit_id]

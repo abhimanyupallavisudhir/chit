@@ -90,20 +90,20 @@ This also applies to e.g. `rm()`.
 Apart from the `chit.Chat` initialization arguments, we have:
 
 ```python
-chit.VERBOSE
+chit.config.VERBOSE
 # default: True
 # enables informational print statements from chit apart from chat responses
 # (e.g. telling you how many tool calls are expected to be calculated)
 
-chit.FORCE
+chit.config.FORCE
 # default: False
 # disables asking for confirmation before removing commits and branches
 
-chit.AUTOSAVE
+chit.config.AUTOSAVE
 # default: True
 # automatically pushes to the Remote, if one is set, after every commit or other change
 
-chit.EDITOR
+chit.config.EDITOR
 # default: "code"
 # default text editor to use for user input if user message is `^N` with no further suffix:
 #     `editor-name` for gui editors, e.g. `^N/code`.
