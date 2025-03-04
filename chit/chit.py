@@ -1,3 +1,5 @@
+import os
+import subprocess
 import tempfile
 import webbrowser
 import warnings
@@ -128,6 +130,9 @@ class Chat:
         role: str = None,
         enable_tools=True,
     ) -> str:
+        if message == "^N":
+            message = self._capture_editor_content()
+            # self.commit(message=content, role=role, **kwargs)
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
             if current_role == "system":
@@ -256,6 +261,29 @@ class Chat:
             )
 
         # return new_message.message["content"]
+
+    def _capture_editor_content(self):
+        """Open text editor and capture content when user is done."""
+        # Create temp file
+        with tempfile.NamedTemporaryFile(suffix=".txt", mode='w', delete=False) as f:
+            temp_path = f.name
+        
+        editor = os.environ.get('EDITOR', 'code')
+        os.system(f"{editor} {temp_path}")
+        
+        input("Press Enter when you're done editing... ")  # Wait for user
+        
+        # Now read the result
+        with open(temp_path, 'r') as f:
+            content = f.read()
+        
+        # Clean up
+        os.unlink(temp_path)
+        
+        if content.strip():
+            return content
+        else:
+            raise ValueError("No content added to editor")
 
     def branch(self, branch_name: str, checkout: bool = False) -> None:
         if branch_name in self.branch_tips:
@@ -604,6 +632,7 @@ class Chat:
         """Remove all messages associated with a branch."""
         # Check if we're trying to remove current branch or home branch
         self.checkout(*self._check_kalidasa_branch(branch_name))
+        
 
         # First pass: identify messages to delete and clean up their parent references
         to_delete = set()
@@ -614,6 +643,9 @@ class Chat:
                 to_delete.add(msg_id)
                 if msg.parent_id is not None:
                     parent_cleanups.append((msg.parent_id, msg_id))
+            if branch_name in msg.children:
+                # to_delete.add(msg.children[branch_name]) # no need to do this now
+                del msg.children[branch_name]
 
         # Clean up parent references
         for parent_id, msg_id in parent_cleanups:
@@ -624,7 +656,7 @@ class Chat:
                     parent.children.items()
                 ):  # Create list copy to modify during iteration
                     if child_id == msg_id:
-                        parent.children[branch] = None
+                        del parent.children[branch]
 
         # Finally delete the messages
         for msg_id in to_delete:
