@@ -488,6 +488,7 @@ class Chat:
             "model": self.model,
             "tools_": self.tools_,
             "remote": vars(self.remote) if self.remote is not None else None,
+            "display_config": self.display_config if self.display_config is not None else None,
             "messages": {k: v.asdict() for k, v in self.messages.items()},
             "current_id": self.current_id,
             "current_branch": self.current_branch,
@@ -618,6 +619,7 @@ class Chat:
             model=data.get("model", chit.config.DEFAULT_MODEL),
             tools=None,
             remote=updated_remote,
+            display_config=data.get("display_config", chit.config.DISPLAY_CONFIG),
         )
 
         chat.messages = {k: ChitMessage(**v) for k, v in data["messages"].items()}
