@@ -157,7 +157,8 @@ chat = import_claude("claude.json")
 - [x] improve `^N` input
 - [x] make pushing and cloning preserve as much as possible
 - [x] autosave feature
-- [ ] fix html visualization issue
+- [x] fix html visualization issue
+- [ ] fix claude imports
 - [ ] cleanup this repo
 - [ ] html gui improvements
     - [ ] i3-like gui
