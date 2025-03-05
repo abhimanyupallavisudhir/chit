@@ -568,6 +568,9 @@ class Chat:
         Arguments:
             remote (str or Remote): path to a json file to load the chat history from, 
                 or a chit.Remote object with json_file and html_file attributes.
+                The one situation it may make sense to have it be a chit.Remote is to
+                specify the full remote of the cloned object, including the html file
+                -- make sure to use use_data_remote = False if you want to do this!
             use_data_remote (bool): whether the remote path stored in the data has 
                 priority compared to the path you're actually cloning from. Set to 
                 False if e.g. you are cloning from a copy or move of the file in a 
@@ -575,19 +578,24 @@ class Chat:
 
         """
         if isinstance(remote, Remote):
-            remote: str = remote.json_file
-        with open(remote, "r") as f:
+            remote_str: str = remote.json_file
+            remote_dict: dict = vars(remote)
+        else:
+            remote_str: str = remote
+            remote_dict: dict = {"json_file": remote_str}
+
+        with open(remote_str, "r") as f:
             data = json.load(f)
 
-        data_remote = data.get("remote", {})
+        data_remote_dict = data.get("remote", {})
         if use_data_remote:
             # data_remote has priority
-            updated_remote = Remote(**({"json_file": remote} | data_remote))
+            updated_remote = Remote(**(remote_dict | data_remote_dict))
         else:
             # remote has priority
-            updated_remote = Remote(**(data_remote | {"json_file": remote}))
-        cprint(f"Remote specified in data: {data_remote}")
-        cprint(f"Remote specified in argument: {remote}")
+            updated_remote = Remote(**(data_remote_dict | remote_dict))
+        cprint(f"Remote specified in data: {Remote(**data_remote_dict)}")
+        cprint(f"Remote specified in argument: {Remote(**remote_dict)}")
         cprint(f"Using remote: {updated_remote}")
         chat = cls(
             model=data.get("model", chit.config.DEFAULT_MODEL),
