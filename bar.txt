@@ -98,7 +98,77 @@
     </footer>
 
     <script>
-
+        // Toggle functionality
+        document.getElementById('toggleBtn').addEventListener('click', function() {
+            const content = document.getElementById('toggleContent');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                this.textContent = 'Hide Content';
+            } else {
+                content.style.display = 'none';
+                this.textContent = 'Toggle Content';
+            }
+        });
+        
+        // Form handling
+        document.getElementById('testForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const formValues = {};
+            
+            formData.forEach((value, key) => {
+                formValues[key] = value;
+            });
+            
+            console.log('Form submitted:', formValues);
+            alert('Form submitted successfully!');
+        });
+        
+        // Dynamic content loading simulation
+        setTimeout(function() {
+            const dynamicContent = document.getElementById('dynamicContent');
+            dynamicContent.innerHTML = `
+                <h3>Content Loaded!</h3>
+                <p>This content was loaded dynamically after a delay.</p>
+                <div class="dynamic-data">
+                    <p>Random number: ${Math.floor(Math.random() * 100)}</p>
+                    <p>Current time: ${new Date().toLocaleTimeString()}</p>
+                </div>
+            `;
+        }, 2000);
+        
+        // Complex data structures and operations
+        const complexData = {
+            users: [
+                { id: 1, name: 'John Doe', role: 'admin', active: true },
+                { id: 2, name: 'Jane Smith', role: 'editor', active: false },
+                { id: 3, name: 'Bob Johnson', role: 'viewer', active: true }
+            ],
+            settings: {
+                darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+                fontSize: 16,
+                notifications: {
+                    email: true,
+                    push: false,
+                    frequency: 'daily'
+                }
+            }
+        };
+        
+        // Apply some operations on the data
+        const activeUsers = complexData.users.filter(user => user.active);
+        console.log('Active users:', activeUsers);
+        
+        function processUserData(userData) {
+            return userData.map(user => ({
+                ...user,
+                displayName: `${user.name} (${user.role})`,
+                lastLogin: new Date().toISOString()
+            }));
+        }
+        
+        const processedUsers = processUserData(complexData.users);
+        console.log('Processed users:', processedUsers);
     </script>
 </body>
 </html>

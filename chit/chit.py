@@ -1107,7 +1107,7 @@ class Chat:
     def _generate_viz_html(self, title: str = "chit conversation") -> str:
         """Generate the HTML for visualization."""
         data = self._prepare_messages_for_viz()
-
+        data_str = json.dumps(data).replace("</", "<\\/")
         return f"""
     <!DOCTYPE html>
     <html>
@@ -1172,7 +1172,7 @@ class Chat:
         <div id="chat-container"></div>
 
         <script>
-            const chatData = {json.dumps(data)};
+            const chatData = {data_str};
             
             marked.setOptions({{ breaks: true, gfm: true }});
 
