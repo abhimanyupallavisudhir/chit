@@ -24,6 +24,13 @@ default: True
 automatically pushes to the Remote, if one is set, after every commit or other change
 """
 
+USE_DATA_REMOTE = False
+"""
+default: False
+whether the remote path stored in the data has priority compared to the path you're actually cloning from.
+Set to False if e.g. you are cloning from a copy or move of the file in a different folder or machine.
+"""
+
 EDITOR = "code"
 """
 default text editor to use for user input if user message is `^N` with no further suffix:

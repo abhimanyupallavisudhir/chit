@@ -580,7 +580,7 @@ class Chat:
         raise TypeError(f"Invalid key type: {type(key)}")
 
     @classmethod
-    def clone(cls, remote: str | Remote, use_data_remote: bool = True) -> "Chat":
+    def clone(cls, remote: str | Remote, use_data_remote: bool = chit.config.USE_DATA_REMOTE) -> "Chat":
         """Create new Chat instance from remote file
         
         Arguments:
@@ -1150,7 +1150,7 @@ class Chat:
         data = self._prepare_messages_for_viz()
         data_str = json.dumps(data).replace("</", "<\\/")
         
-        self.display_config = getattr(self, "display_config", {})
+        self.display_config = getattr(self, "display_config", chit.config.DISPLAY_CONFIG)
 
         # Get display configuration
         display_title = self.display_config.get("title", "chit conversation")
@@ -1169,11 +1169,11 @@ class Chat:
 
         # Prepare tools info
         tools_info = ""
-        if show_tools and self.tools:
-            tool_list = self.tools[:max_tools] if max_tools else self.tools
-            tools_str = ", ".join(f"`{t.__name__}`" for t in tool_list)
-            if max_tools and len(self.tools) > max_tools:
-                tools_str += f" and {len(self.tools) - max_tools} more"
+        if show_tools and self.tools_:
+            tool_list = self.tools_[:max_tools] if max_tools else self.tools_
+            tools_str = ", ".join(f"`{t['function']['name']}`" for t in tool_list)
+            if max_tools and len(self.tools_) > max_tools:
+                tools_str += f" and {len(self.tools_) - max_tools} more"
             tools_info = f"Available tools: {tools_str}"
 
         return f"""
