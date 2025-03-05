@@ -59,6 +59,7 @@ class Remote:
 
 
 class Chat:
+
     def __init__(
         self,
         model: str = "openrouter/anthropic/claude-3.7-sonnet",
@@ -465,20 +466,25 @@ class Chat:
 
         return history
 
+    def dict(self):
+        return {
+            "model": self.model,
+            "tools_": self.tools_,
+            "remote": vars(self.remote) if self.remote is not None else None,
+            "messages": {k: v.dict() for k, v in self.messages.items()},
+            "current_id": self.current_id,
+            "current_branch": self.current_branch,
+            "root_id": self.root_id,
+            "branch_tips": self.branch_tips,
+        }
+
     def push(self) -> None:
         """Save chat history to configured remote"""
         if self.remote is None:
             raise ValueError("No remote configured. Set chat.remote first.")
 
         if self.remote.json_file is not None:
-            data = {
-                "model": self.model,
-                "messages": {k: v.dict() for k, v in self.messages.items()},
-                "current_id": self.current_id,
-                "current_branch": self.current_branch,
-                "root_id": self.root_id,
-                "branch_tips": self.branch_tips,
-            }
+            data = self.dict()
             with open(self.remote.json_file, "w") as f:
                 json.dump(data, f)
 
@@ -563,13 +569,28 @@ class Chat:
         with open(remote, "r") as f:
             data = json.load(f)
 
-        chat = cls(model=data["model"])
-        chat.remote = remote  # Set remote automatically when cloning
+        data_remote = Remote(**data["remote"])
+        chat = cls(
+            model=data["model"],
+            tools=None,
+            remote=data_remote,
+        )
+
+        if data_remote.json_file != remote:
+            cprint(
+                f"WARNING: automatically set remote to {data_remote.json_file} instead of {remote}.\n"
+                f"You can manually set the `remote` attribute to {remote}"
+            )
         chat.messages = {k: ChitMessage(**v) for k, v in data["messages"].items()}
         chat.current_id = data["current_id"]
         chat.current_branch = data["current_branch"]
         chat.root_id = data["root_id"]
         chat.branch_tips = data["branch_tips"]
+        if data["_tools"]:
+            cprint(
+                f"WARNING: found the following tools in the remote: {data['_tools']} "
+                "but cannot add them as we do not have the functions. Please add them manually."
+            )
         return chat
 
     @property
