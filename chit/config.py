@@ -1,3 +1,9 @@
+DEFAULT_MODEL = "openrouter/anthropic/claude-3.5-sonnet"
+"""
+default: "openrouter/anthropic/claude-3.5-sonnet"
+default model to initialize chit.Chat objects with
+"""
+
 VERBOSE = True
 """
 default: True

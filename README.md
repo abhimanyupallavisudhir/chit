@@ -114,6 +114,10 @@ This also applies to e.g. `rm()`.
 Apart from the `chit.Chat` initialization arguments, we have:
 
 ```python
+DEFAULT_MODEL
+# default: "openrouter/anthropic/claude-3.5-sonnet"
+# default model to initialize chit.Chat objects with
+
 chit.config.VERBOSE
 # default: True
 # enables informational print statements from chit apart from chat responses

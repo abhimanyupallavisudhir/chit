@@ -1,0 +1,184 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>chit conversation</title>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+        <style>
+            body {
+                font-family: system-ui, -apple-system, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }
+            .message {
+                margin: 20px 0;
+                padding: 15px;
+                border-radius: 10px;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .message.system { background: #f0f0f0; }
+            .message.user { background: #f0f7ff; }
+            .message.assistant { background: white; }
+            .message-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                font-size: 0.9em;
+                color: #666;
+            }
+            select {
+                padding: 4px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+            }
+            .thumbnail {
+                max-width: 200px;
+                max-height: 200px;
+                cursor: pointer;
+                margin: 10px 0;
+            }
+            .current { border-left: 4px solid #007bff; }
+            pre {
+                background: #f8f9fa;
+                padding: 10px;
+                border-radius: 4px;
+                overflow-x: auto;
+            }
+            code {
+                font-family: monospace;
+                background: #f8f9fa;
+                padding: 2px 4px;
+                border-radius: 3px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="chat-container"></div>
+
+        <script>
+            const chatData = {"messages": {"df853a7b": {"id": "df853a7b", "message": {"role": "system", "content": "You are a helpful assistant."}, "children": {"master": "d5b4fe6a"}, "parent_id": null, "home_branch": "master"}, "d5b4fe6a": {"id": "d5b4fe6a", "message": {"role": "user", "content": "Hello, world!"}, "children": {"master": "79b4c3d5"}, "parent_id": "df853a7b", "home_branch": "master"}, "79b4c3d5": {"id": "79b4c3d5", "message": {"content": "Hi there! It's great to connect with you. How can I help you today? Whether you have a question, need information, or just want to chat, I'm here to assist. Feel free to let me know what's on your mind!", "role": "assistant", "tool_calls": null, "function_call": null}, "children": {"master": "094b8cbb"}, "parent_id": "d5b4fe6a", "home_branch": "master"}, "094b8cbb": {"id": "094b8cbb", "message": {"role": "user", "content": "## Testing various formats\n\n*This should work*, as should **this**.\n\n> Quotes should work, including with [links](https://example.com)\n\n```\ndef code_block():\n    \"\"\"\n    This is a docstring\n    \"\"\"\n    text = \"textstring with 'single quotes'\"\n    alt_text = 'textstring with \"double quotes\"'\n    raw_text = r'escapable characters include: \\, \\n, \\\" \\' '\n    f_text = f\"including {text}\\n\\n{alt_text} and\\n\\n{raw_text}\\nnote the \\\\n characters!\"\n```\n\nI'm testing stuff. Can you produce some arbitrarily complex markdown text to help me test things?"}, "children": {"master": "43aac0b5", "master_1": "473abbfc", "master_2": "4d8dbfdf"}, "parent_id": "79b4c3d5", "home_branch": "master"}, "43aac0b5": {"id": "43aac0b5", "message": {"content": "# Markdown Showcase\n\nYou're doing a great job testing markdown! Here's a comprehensive example with various markdown elements:\n\n## Text Formatting\n\n*Italics* and **bold** are working well. You can also do ***bold italics*** or ~~strikethrough~~ text.\n\nSometimes you need ^superscript^ or ~", "role": "assistant", "tool_calls": null, "function_call": null}, "children": {"master": "ccef8837"}, "parent_id": "094b8cbb", "home_branch": "master"}, "ccef8837": {"id": "ccef8837", "message": {"role": "user", "content": "I think you got cut off? Did you just generate your own stop character by mistake or something?"}, "children": {"master": "e6fa2efb"}, "parent_id": "43aac0b5", "home_branch": "master"}, "e6fa2efb": {"id": "e6fa2efb", "message": {"content": "You're right, I did get cut off! I apologize for that error. Let me provide a complete markdown showcase without any accidental truncation:\n\n# Markdown Showcase\n\n## Text Formatting\n\n*Italics* and **bold** are working well. You can also do ***bold italics*** or ~~strikethrough~~ text.\n\nSometimes you need <sup>superscript</sup> or <sub>subscript</sub> elements (note that these use HTML tags).\n\n## Lists\n\n### Ordered Lists\n1. First item\n2. Second item\n   1. Nested item\n   2. Another nested item\n3. Third item\n\n### Unordered Lists\n- Bullet point\n- Another point\n  * Nested point with different marker\n  * Another nested point\n- Back to the main level\n\n## Code Examples\n\nInline code: `const greeting = \"Hello, world!\";`\n\n```javascript\n// A more complex code block\nfunction calculateFactorial(n) {\n  if (n <= 1) return 1;\n  return n * calculateFactorial(n - 1);\n}\n\n// Example usage\nconsole.log(`5! = ${calculateFactorial(5)}`); // Outputs: 5! = 120\n```\n\n## Blockquotes\n\n> This is a simple blockquote\n> \n> > This is a nested blockquote with **formatted text**\n> >\n> > It", "role": "assistant", "tool_calls": null, "function_call": null}, "children": {"master": null}, "parent_id": "ccef8837", "home_branch": "master"}, "473abbfc": {"id": "473abbfc", "message": {"content": "#", "role": "assistant", "tool_calls": null, "function_call": null}, "children": {"master_1": null}, "parent_id": "094b8cbb", "home_branch": "master_1"}, "4d8dbfdf": {"id": "4d8dbfdf", "message": {"content": "# Markdown Showcase\n\nI'd be happy to create a complex markdown example for your testing! Here's a variety of markdown elements combined into one comprehensive sample:\n\n## 1. Text Formatting\n\n*Italic text* and _alternate italic_\n**Bold text** and __alternate bold__\n***Bold and italic*** or ___another way___\n~~Strikethrough~~ for deleted content\n`inline code` for technical terms\n\n## 2. Lists\n\n### Ordered List\n1. First item\n2. Second item\n   1. Nested item 2.1\n   2. Nested item 2.2\n3. Third item with `code`\n\n### Unordered List\n- Main bullet\n  * Sub-bullet with *italic*\n  * Another sub-bullet\n- Second bullet with **bold**\n  - Even deeper nesting\n    - And deeper still\n\n## 3. Blockquotes\n\n> This is a simple blockquote\n> \n> > This is a nested blockquote with **formatting**\n> >\n> > ```python\n> > # Even code inside blockquotes\n> > def nested_function():\n> >     return \"Amazing!\"\n> > ```\n\n## 4. Code Blocks\n\n```javascript\n// JavaScript example\nfunction complexExample() {\n  const obj = {\n    name: \"Test Object\",\n    values: [1, 2, 3],\n    meta {\n      created: \"2023-11-14\",\n      tags: [\"test\", \"example\", \"markdown\"]\n    }\n  };\n  \n  console.log(`Created by ${obj.name} on ${obj.metadata.created}`);\n  return obj.values.map(x => x * 2);\n}\n```\n\n## 5. Tables\n\n| Feature | Support | Complexity |\n|---------|:-------:|----------:|\n| Basic text | \u2705 | Low |\n| *Formatted* text | \u2705 | Medium |\n| [Links](#links) | \u2705 | Medium |\n| Alignment | \u2705 | High |\n| Nested `code` | \u2705 | High |\n\n## 6. Links and Images\n\n[External link to Example](https://example.com)\n[Reference link][ref-style]\n[Link with title](https://example.com \"Example Website\")\n\n![Alt text for an image](https://via.placeholder.com/150 \"Image title\")\n\n[ref-style]: https://example.com/reference\n\n## 7. Task Lists\n\n- [x] Completed task\n- [ ] Incomplete task\n- [x] Task with **formatted** text and [link](https://example.com)\n\n## 8. Horizontal Rules\n\nAbove the line\n\n---\n\nBelow the line\n\n***\n\nAnother style\n\n## 9. Footnotes\n\nHere's a sentence with a footnote reference[^1].\n\n[^1]: This is the footnote content with *formatting* and [links](https://example.com).\n\n## 10. Complex Nesting Example\n\n> ### Heading inside a blockquote\n> \n> - List inside blockquote\n>   1. Numbered inside unordered\n>      ```python\n>      # Code block inside list inside blockquote\n>      def inception():\n>          return \"Deep nesting\"\n>      ```\n> \n> | Table | Inside |\n> |-------|--------|\n> | A blockquote | *Indeed* |\n\n## 11. Definition Lists\n\nTerm 1\n: Definition with *formatting* and `code`\n: Multiple definitions possible\n\nTerm 2\n: Another definition with **bold text**\n\n## 12. Escaping Characters\n\n\\*Not italic\\* and \\`not code\\`\nEscaped backslash: \\\\\nEscaped formatting: \\**\\_\\~\\`\n\nHope this helps with your testing! Let me know if you need any other specific markdown elements.", "role": "assistant", "tool_calls": null, "function_call": null}, "children": {"master_2": "e91da23d"}, "parent_id": "094b8cbb", "home_branch": "master_2"}, "e91da23d": {"id": "e91da23d", "message": {"role": "user", "content": "Can you do some code blocks containing complex HTML, including script tags and doctypes? And some markdown mixed with HTML? I'm basically testing a markdown renderer."}, "children": {"master_2": null}, "parent_id": "4d8dbfdf", "home_branch": "master_2"}}, "current_id": "e91da23d", "root_id": "df853a7b"};
+            
+            marked.setOptions({ breaks: true, gfm: true });
+
+            function renderContent(content) {
+                if (typeof content === 'string') return marked.parse(content);
+                
+                let html = '';
+                for (const item of content) {
+                    if (item.type === 'text') {
+                        html += marked.parse(item.text);
+                    } else if (item.type === 'image_url') {
+                        const url = item.image_url.url;
+                        html += `<img src="${url}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
+                    }
+                }
+                return html;
+            }
+
+            function getMessagesFromRoot(startId) {
+                let messages = [];
+                let currentId = startId;
+                
+                // First go back to root
+                while (currentId) {
+                    const msg = chatData.messages[currentId];
+                    messages.unshift(msg);
+                    currentId = msg.parent_id;
+                }
+                
+                return messages;
+            }
+
+            function getCompleteMessageChain(startId) {
+                let messages = getMessagesFromRoot(startId);
+                
+                // Now follow home_branches forward
+                let currentMsg = messages[messages.length - 1];
+                while (currentMsg) {
+                    // Get the next message following home_branch
+                    const children = currentMsg.children;
+                    const homeBranch = currentMsg.home_branch;
+                    const nextId = children[homeBranch];
+                    
+                    if (!nextId) break;  // Stop if no child on home_branch
+                    
+                    currentMsg = chatData.messages[nextId];
+                    messages.push(currentMsg);
+                }
+                
+                return messages;
+            }
+
+            function onBranchSelect(messageId, selectedBranch) {
+                console.log('Branch selected:', messageId, selectedBranch);
+                
+                const msg = chatData.messages[messageId];
+                const childId = msg.children[selectedBranch];
+                
+                if (!childId) return;
+                
+                // Get complete chain including all home_branch children
+                chatData.current_id = childId;
+                renderMessages();
+            }
+
+            function renderMessages() {
+                console.log('Rendering messages, current_id:', chatData.current_id);
+                
+                const container = document.getElementById('chat-container');
+                container.innerHTML = '';
+                
+                const messages = getCompleteMessageChain(chatData.current_id);
+                console.log('Messages to render:', messages.map(m => m.id));
+                
+                messages.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `message ${msg.message.role} ${msg.id === chatData.current_id ? 'current' : ''}`;
+                    
+                    let branchHtml = '';
+                    if (msg.children && Object.keys(msg.children).length > 0) {
+                        const branches = Object.entries(msg.children)
+                            .filter(([_, childId]) => childId !== null);
+                        
+                        if (branches.length > 0) {
+                            const options = branches
+                                .map(([branch, childId]) => 
+                                    `<option value="${branch}" ${childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}>${branch}</option>`)
+                                .join('');
+                            
+                            branchHtml = `
+                                <select onchange="onBranchSelect('${msg.id}', this.value)" 
+                                        ${branches.length === 1 ? 'disabled' : ''}>
+                                    ${options}
+                                </select>
+                            `;
+                        }
+                    }                    
+                    div.innerHTML = `
+                        <div class="message-header">
+                            <span>${msg.message.role}</span>
+                            ${branchHtml}
+                        </div>
+                        <div class="message-content">
+                            ${renderContent(msg.message.content)}
+                        </div>
+                    `;
+                    
+                    container.appendChild(div);
+                });
+                
+                MathJax.typeset();
+            }
+
+            // Initial render
+            renderMessages();
+        </script>
+    </body>
+    </html>
+    

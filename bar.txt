@@ -1,0 +1,105 @@
+```
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex HTML Example</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Complex HTML Test</h1>
+        <nav>
+            <ul>
+                <li><a href="#section1">Section 1</a></li>
+                <li><a href="#section2">Section 2</a></li>
+                <li><a href="#section3">Section 3</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main class="container">
+        <section id="section1" class="card">
+            <h2>Interactive Section</h2>
+            <p>This section contains interactive elements:</p>
+            <button id="toggleBtn">Toggle Content</button>
+            <div id="toggleContent" style="display:none;">
+                <p>This content can be toggled!</p>
+                <ul>
+                    <li>Item 1</li>
+                    <li>Item 2</li>
+                    <li>Item 3</li>
+                </ul>
+            </div>
+        </section>
+        
+        <section id="section2" class="card">
+            <h2>Form Elements</h2>
+            <form id="testForm">
+                <div>
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div>
+                    <label for="message">Message:</label>
+                    <textarea id="message" name="message" rows="4"></textarea>
+                </div>
+                <div>
+                    <input type="checkbox" id="subscribe" name="subscribe">
+                    <label for="subscribe">Subscribe to newsletter</label>
+                </div>
+                <button type="submit">Submit</button>
+            </form>
+        </section>
+        
+        <section id="section3" class="card">
+            <h2>Dynamic Content</h2>
+            <div id="dynamicContent">
+                <p>Loading content...</p>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 Test Company. All rights reserved.</p>
+    </footer>
+
+    <script>
+
+    </script>
+</body>
+</html>
+```

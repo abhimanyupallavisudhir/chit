@@ -60,7 +60,7 @@ class Remote:
 class Chat:
     def __init__(
         self,
-        model: str = "openrouter/anthropic/claude-3.7-sonnet",
+        model: str = chit.config.DEFAULT_MODEL,
         tools: list[callable] | None = None,
         remote: str | Remote | None = None,
     ):
@@ -571,7 +571,7 @@ class Chat:
 
         updated_remote = Remote(**({"json_file": remote} | data.get("remote", {})))
         chat = cls(
-            model=data["model"],
+            model=data.get("model", chit.config.DEFAULT_MODEL),
             tools=None,
             remote=updated_remote,
         )
