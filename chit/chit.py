@@ -1308,3 +1308,11 @@ class Chat:
             print(self._log_forum())
         elif style == "gui":
             self.gui()
+
+    @classmethod
+    def migrate(cls, json_file: str, format: Literal["claude"] = "claude") -> "Chat":
+        if format == "claude":
+            from chit.import_claude import import_claude
+            return import_claude(json_file)
+        else:
+            raise NotImplementedError(f"Migration from {format} format is not supported")

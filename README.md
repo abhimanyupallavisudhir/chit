@@ -146,8 +146,7 @@ We have a (probably very rudimentary) importer function for Claude exports, used
 
 ```python
 import chit
-from chit.import_claude import import_claude
-chat = import_claude("claude.json")
+chat = chit.Chat.migrate("claude_export.json", format="claude")
 ```
 
 [Here](https://www.reddit.com/r/ClaudeAI/comments/1ciitou/any_good_tools_for_exporting_chats/) is how you get a Claude export (for a particular chat) -- do *not* use the default Claude data dump in account settings (this does not preserve tree structure); instead load the Claude chat with `Chrome Dev Tools > Network` open and find the correct resource.

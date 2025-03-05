@@ -5,5 +5,3 @@
 **/*.pyo
 **/*.pyd
 .logs
-claude.json
-example_remotes
