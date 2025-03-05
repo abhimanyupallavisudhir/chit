@@ -23,7 +23,6 @@ from litellm.types.utils import (
 from litellm.types.utils import Message as ChatCompletionMessage
 
 
-
 @dataclass
 class ChitMessage:
     id: str
@@ -37,7 +36,7 @@ class ChitMessage:
     def heir_id(self):
         return self.children[self.home_branch]
 
-    def dict(self):
+    def asdict(self):
         return {
             "id": self.id,
             "message": self.message
@@ -59,7 +58,6 @@ class Remote:
 
 
 class Chat:
-
     def __init__(
         self,
         model: str = "openrouter/anthropic/claude-3.7-sonnet",
@@ -126,18 +124,19 @@ class Chat:
             self.push()
 
     def _recalc_tools(self):
-        if self.tools is not None:
-            for tool in self.tools:
-                if not callable(tool):
-                    raise ValueError("1) what")
-                if not hasattr(tool, "json") or not isinstance(tool.json, dict):
-                    # a tool is a function with an attribute json of type dict.
-                    # can automatically calculate the json if it has a numpydoc
-                    # docstring
-                    json_spec: dict = litellm.utils.function_to_dict(tool)
-                    tool.json = {"type": "function", "function": json_spec}
-            self.tools_ = [tool.json for tool in self.tools]
-            self.tool_map = {tool.json["function"]["name"]: tool for tool in self.tools}
+        if self.tools is None:
+            self.tools = []
+        for tool in self.tools:
+            if not callable(tool):
+                raise ValueError("1) what")
+            if not hasattr(tool, "json") or not isinstance(tool.json, dict):
+                # a tool is a function with an attribute json of type dict.
+                # can automatically calculate the json if it has a numpydoc
+                # docstring
+                json_spec: dict = litellm.utils.function_to_dict(tool)
+                tool.json = {"type": "function", "function": json_spec}
+        self.tools_ = [tool.json for tool in self.tools]
+        self.tool_map = {tool.json["function"]["name"]: tool for tool in self.tools}
 
     def _generate_short_id(self, length: int = 8) -> str:
         """Generate a short, unique ID of specified length"""
@@ -148,10 +147,11 @@ class Chat:
             # Ensure it doesn't already exist in our messages
             if not hasattr(self, "messages") or new_id not in self.messages:
                 return new_id
-            
+
     def _generate_new_branch_name(self, branch_name: str) -> str:
         """Generate a new branch name based on the current branch name"""
         import re
+
         new_branch_name = branch_name
         while new_branch_name in self.branch_tips:
             match = re.match(r"^(.+)_(\d+)$", new_branch_name)
@@ -225,7 +225,7 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            if hasattr(self, "tools_") and self.tools_ is not None and enable_tools:
+            if hasattr(self, "tools_") and self.tools_ and enable_tools:
                 response = completion(
                     model=self.model,
                     messages=history,
@@ -466,12 +466,12 @@ class Chat:
 
         return history
 
-    def dict(self):
+    def asdict(self):
         return {
             "model": self.model,
             "tools_": self.tools_,
             "remote": vars(self.remote) if self.remote is not None else None,
-            "messages": {k: v.dict() for k, v in self.messages.items()},
+            "messages": {k: v.asdict() for k, v in self.messages.items()},
             "current_id": self.current_id,
             "current_branch": self.current_branch,
             "root_id": self.root_id,
@@ -484,7 +484,7 @@ class Chat:
             raise ValueError("No remote configured. Set chat.remote first.")
 
         if self.remote.json_file is not None:
-            data = self.dict()
+            data = self.asdict()
             with open(self.remote.json_file, "w") as f:
                 json.dump(data, f)
 
@@ -569,16 +569,16 @@ class Chat:
         with open(remote, "r") as f:
             data = json.load(f)
 
-        data_remote = Remote(**data["remote"])
+        updated_remote = Remote(**({"json_file": remote} | data.get("remote", {})))
         chat = cls(
             model=data["model"],
             tools=None,
-            remote=data_remote,
+            remote=updated_remote,
         )
 
-        if data_remote.json_file != remote:
+        if updated_remote.json_file != remote:
             cprint(
-                f"WARNING: automatically set remote to {data_remote.json_file} instead of {remote}.\n"
+                f"WARNING: automatically set remote to {updated_remote.json_file} instead of {remote}.\n"
                 f"You can manually set the `remote` attribute to {remote}"
             )
         chat.messages = {k: ChitMessage(**v) for k, v in data["messages"].items()}
@@ -586,7 +586,7 @@ class Chat:
         chat.current_branch = data["current_branch"]
         chat.root_id = data["root_id"]
         chat.branch_tips = data["branch_tips"]
-        if data["_tools"]:
+        if data.get("_tools", None):
             cprint(
                 f"WARNING: found the following tools in the remote: {data['_tools']} "
                 "but cannot add them as we do not have the functions. Please add them manually."
@@ -777,7 +777,6 @@ class Chat:
             for branch, child_id in parent.children.items():
                 if child_id == commit_id:
                     parent.children[branch] = None
-
 
         for branch, tip_id in self.branch_tips.items():
             if tip_id == commit_id:

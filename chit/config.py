@@ -3,6 +3,7 @@ VERBOSE = True
 default: True
 enables informational print statements from chit apart from chat responses
 (e.g. telling you how many tool calls are expected to be calculated)
+Strongly recommend that this be kept to True.
 """
 
 FORCE = False
