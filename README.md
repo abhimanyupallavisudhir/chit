@@ -65,7 +65,27 @@ Analyze and review the folowing code:
 chat.commit()
 ```
 
-Another useful thing you may want is to type your prompts in a temporary text file (rather than within a jupyter notebook or python file), e.g. to avoid syntax conflicts (like having to escape quotes manually). You can do so by typing your message as `^N`:
+Another useful thing you may like to do is use Jupyter's built-in text areas to input your text, e.g. to avoid syntax conflicts (like having to escape quotes manually):
+
+```python
+import chit
+from chit import textput
+
+chat = chit.Chat()
+
+prompt = textput()
+
+# ... write your prompt in the text area that appears, 
+# no need to worry about clicking any submit buttons,
+# it's dynamic ...
+# 
+# ... then in a new cell ...
+
+chat.commit(prompt.value)
+chat.commit()
+```
+
+A more traditional way to do this is to type your prompts in a temporary text file (rather than within a jupyter notebook or python file). We do support this; you can do so by typing your message as `^N`:
 
 ```python
 import chit
@@ -75,6 +95,9 @@ chat = chit.Chat()
 chat.commit("^N") # opens up a temporary file in VS Code
 chat.commit()
 ```
+
+And can also specify a specific editor like `^N/code` (which runs `code /tmp/whatever.txt`) or ``^N/gnome-terminal$vim` (which runs `gnome-terminal -- vim /tmp/whatever.txt`). However `^N` is currently quite broken and unreliable, especially in a Jupyter notebook -- it does not work with the `terminal$editor` setup at all, and is unreliable even with `code`. I recommend just using jupyter text areas for now.
+
 
 ## indexing
 

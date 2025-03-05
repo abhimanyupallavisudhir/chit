@@ -39,6 +39,22 @@ def cconfirm(prompt: str) -> bool:
 def read(file_path: str | Path) -> str:
     with open(file_path, "r") as f:
         return f.read()
+    
+def textput():
+    import ipywidgets as widgets
+    from IPython.display import display
+        
+    # Create text area and button
+    text_area = widgets.Textarea(
+        placeholder='Type your message here...',
+        layout=widgets.Layout(width='100%', height='200px')
+    )
+    
+    # Display widgets
+    display(text_area)
+
+    return text_area
+
 
 
 @dataclass
@@ -187,7 +203,6 @@ class Chat:
         if message and message.startswith("^N"):
             # Parse editor specification
             editor_spec = message[2:].strip("/ ")
-            print(editor_spec)
             message = self._capture_editor_content(editor_spec)
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
@@ -339,26 +354,7 @@ class Chat:
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False) as f:
             temp_path = f.name
 
-        if editor_spec == "$jupyter":
-            # Use IPython widgets if available
-            try:
-                import ipywidgets as widgets
-                from IPython.display import display
-
-                text_area = widgets.Textarea(
-                    placeholder="Type your message here...",
-                    layout=widgets.Layout(width="100%", height="200px"),
-                )
-                display(text_area)
-                content = input(
-                    "Type your message in the text area given and press Enter here when done... "
-                )
-                return text_area.value
-
-            except ImportError:
-                raise ValueError("$jupyter specified but not in a Jupyter environment")
-
-        elif "$" in editor_spec:
+        if "$" in editor_spec:
             # Terminal-based editor
             terminal, editor = editor_spec.split("$")
             os.system(f"{terminal} -- {editor} {temp_path}")
