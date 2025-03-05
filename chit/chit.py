@@ -45,7 +45,12 @@ class ChitMessage:
             "children": self.children,
             "parent_id": self.parent_id,
             "home_branch": self.home_branch,
-            "tool_calls": [tool_call.to_dict() for tool_call in self.tool_calls]
+            "tool_calls": [
+                tool_call.to_dict()
+                if isinstance(tool_call, ChatCompletionMessageToolCall)
+                else tool_call
+                for tool_call in self.tool_calls
+            ]
             if self.tool_calls is not None
             else None,
         }
@@ -488,7 +493,9 @@ class Chat:
             "model": self.model,
             "tools_": self.tools_,
             "remote": vars(self.remote) if self.remote is not None else None,
-            "display_config": self.display_config if self.display_config is not None else None,
+            "display_config": self.display_config
+            if self.display_config is not None
+            else None,
             "messages": {k: v.asdict() for k, v in self.messages.items()},
             "current_id": self.current_id,
             "current_branch": self.current_branch,
@@ -580,18 +587,20 @@ class Chat:
         raise TypeError(f"Invalid key type: {type(key)}")
 
     @classmethod
-    def clone(cls, remote: str | Remote, use_data_remote: bool = chit.config.USE_DATA_REMOTE) -> "Chat":
+    def clone(
+        cls, remote: str | Remote, use_data_remote: bool = chit.config.USE_DATA_REMOTE
+    ) -> "Chat":
         """Create new Chat instance from remote file
-        
+
         Arguments:
-            remote (str or Remote): path to a json file to load the chat history from, 
+            remote (str or Remote): path to a json file to load the chat history from,
                 or a chit.Remote object with json_file and html_file attributes.
                 The one situation it may make sense to have it be a chit.Remote is to
                 specify the full remote of the cloned object, including the html file
                 -- make sure to use use_data_remote = False if you want to do this!
-            use_data_remote (bool): whether the remote path stored in the data has 
-                priority compared to the path you're actually cloning from. Set to 
-                False if e.g. you are cloning from a copy or move of the file in a 
+            use_data_remote (bool): whether the remote path stored in the data has
+                priority compared to the path you're actually cloning from. Set to
+                False if e.g. you are cloning from a copy or move of the file in a
                 different folder or machine.
 
         """
@@ -1149,8 +1158,10 @@ class Chat:
         """Generate the HTML for visualization."""
         data = self._prepare_messages_for_viz()
         data_str = json.dumps(data).replace("</", "<\\/")
-        
-        self.display_config = getattr(self, "display_config", chit.config.DISPLAY_CONFIG)
+
+        self.display_config = getattr(
+            self, "display_config", chit.config.DISPLAY_CONFIG
+        )
 
         # Get display configuration
         display_title = self.display_config.get("title", "chit conversation")
@@ -1182,7 +1193,7 @@ class Chat:
         <head>
             <title>{display_title} | chit</title>
             <meta charset="UTF-8">
-            {'<link rel="icon" href="' + favicon + '">' if favicon else ''}
+            {'<link rel="icon" href="' + favicon + '">' if favicon else ""}
             <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
             <style>
@@ -1393,6 +1404,9 @@ class Chat:
     def migrate(cls, json_file: str, format: Literal["claude"] = "claude") -> "Chat":
         if format == "claude":
             from chit.import_claude import import_claude
+
             return import_claude(json_file)
         else:
-            raise NotImplementedError(f"Migration from {format} format is not supported")
+            raise NotImplementedError(
+                f"Migration from {format} format is not supported"
+            )
