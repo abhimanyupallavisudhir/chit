@@ -215,8 +215,5 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui
-    - [ ] footer saying made with chit
-    - [ ] show commit IDs next to messages, etc.
-    - [ ] make sure display config is pushed and cloned
     - [ ] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
 - [ ] add imports from chatgpt, deepseek, xai, gemini, various LLM frontends etc. (only claude currently implemented)
