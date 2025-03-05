@@ -140,6 +140,37 @@ chit.config.EDITOR
 # can be overriden in commit by giving 
 ```
 
+This is the first cell of my own personal chit notebook:
+
+```python
+import chit
+import chit.config
+from chit.utils import read, textput
+
+%load_ext autoreload
+%autoreload 2
+
+ALIASES = {
+    "claude": "openrouter/anthropic/claude-3.5-sonnet",
+    "claude3.7": "openrouter/anthropic/claude-3.7-sonnet",
+    "deepseek": "openrouter/deepseek/deepseek-chat",
+    "deepseek-r1": "openrouter/deepseek/deepseek-r1",
+    "gpt-4o": "openrouter/openai/gpt-4o",
+    "gpt-4o-mini": "openrouter/openai/gpt-4o-mini",
+    "o1-mini": "openrouter/openai/o1-mini",
+    "o1-preview": "openrouter/openai/o1-preview",
+    "o1": "openrouter/openai/o1",
+    "o3-mini-high": "openrouter/openai/o3-mini-high",
+    "o3-mini": "openrouter/openai/o3-mini",
+}
+
+chit.config.DEFAULT_MODEL = ALIASES["claude"]
+chit.config.VERBOSE = True
+chit.config.FORCE = True
+chit.config.AUTOSAVE = True
+chit.config.EDITOR = "code"
+```
+
 ## imports
 
 We have a (probably very rudimentary) importer function for Claude exports, used as follows:
