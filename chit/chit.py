@@ -1107,6 +1107,14 @@ class Chat:
     def _generate_viz_html(self, title: str = "chit conversation") -> str:
         """Generate the HTML for visualization."""
         data = self._prepare_messages_for_viz()
+        # From https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements:
+        # > The easiest and safest way to avoid the rather strange restrictions described in this section is to always 
+        # > escape an ASCII case-insensitive match for "<!--" as "\x3C!--", "<script" as "\x3Cscript", and "</script" 
+        # > as "\x3C/script" when these sequences appear in literals in scripts (e.g. in strings, regular expressions, 
+        # > or comments), and to avoid writing code that uses such constructs in expressions. Doing so avoids the 
+        # > pitfalls that the restrictions in this section are prone to triggering: namely, that, for historical 
+        # > reasons, parsing of script blocks in HTML is a strange and exotic practice that acts unintuitively in the 
+        # > face of these sequences.
         data_str = json.dumps(data).replace("</", "<\\/")
         return f"""
     <!DOCTYPE html>
