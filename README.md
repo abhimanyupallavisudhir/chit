@@ -158,7 +158,7 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [x] autosave feature
 - [x] fix html visualization issue
 - [ ] fix claude imports
-- [ ] cleanup this repo
+- [x] cleanup this repo
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui
