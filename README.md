@@ -157,8 +157,9 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [x] make pushing and cloning preserve as much as possible
 - [x] autosave feature
 - [x] fix html visualization issue
-- [ ] fix claude imports
+- [ ] fix claude imports -- or maybe it's actually an issue with the visualization, let's see
 - [x] cleanup this repo
+- [ ] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something.
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui
