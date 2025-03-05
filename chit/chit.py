@@ -562,25 +562,39 @@ class Chat:
         raise TypeError(f"Invalid key type: {type(key)}")
 
     @classmethod
-    def clone(cls, remote: str | Remote) -> "Chat":
-        """Create new Chat instance from remote file"""
+    def clone(cls, remote: str | Remote, use_data_remote: bool = True) -> "Chat":
+        """Create new Chat instance from remote file
+        
+        Arguments:
+            remote (str or Remote): path to a json file to load the chat history from, 
+                or a chit.Remote object with json_file and html_file attributes.
+            use_data_remote (bool): whether the remote path stored in the data has 
+                priority compared to the path you're actually cloning from. Set to 
+                False if e.g. you are cloning from a copy or move of the file in a 
+                different folder or machine.
+
+        """
         if isinstance(remote, Remote):
             remote: str = remote.json_file
         with open(remote, "r") as f:
             data = json.load(f)
 
-        updated_remote = Remote(**({"json_file": remote} | data.get("remote", {})))
+        data_remote = data.get("remote", {})
+        if use_data_remote:
+            # data_remote has priority
+            updated_remote = Remote(**({"json_file": remote} | data_remote))
+        else:
+            # remote has priority
+            updated_remote = Remote(**(data_remote | {"json_file": remote}))
+        cprint(f"Remote specified in data: {data_remote}")
+        cprint(f"Remote specified in argument: {remote}")
+        cprint(f"Using remote: {updated_remote}")
         chat = cls(
             model=data.get("model", chit.config.DEFAULT_MODEL),
             tools=None,
             remote=updated_remote,
         )
 
-        if updated_remote.json_file != remote:
-            cprint(
-                f"WARNING: automatically set remote to {updated_remote.json_file} instead of {remote}.\n"
-                f"You can manually set the `remote` attribute to {remote}"
-            )
         chat.messages = {k: ChitMessage(**v) for k, v in data["messages"].items()}
         chat.current_id = data["current_id"]
         chat.current_branch = data["current_branch"]
