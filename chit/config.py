@@ -24,7 +24,7 @@ default: True
 automatically pushes to the Remote, if one is set, after every commit or other change
 """
 
-USE_DATA_REMOTE = False
+PRIORITIZE_DATA_REMOTE = False
 """
 default: False
 whether the remote path stored in the data has priority compared to the path you're actually cloning from.

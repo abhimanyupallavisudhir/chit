@@ -588,7 +588,7 @@ class Chat:
 
     @classmethod
     def clone(
-        cls, remote: str | Remote, use_data_remote: bool = chit.config.USE_DATA_REMOTE
+        cls, remote: str | Remote, prioritize_data_remote: bool = chit.config.PRIORITIZE_DATA_REMOTE
     ) -> "Chat":
         """Create new Chat instance from remote file
 
@@ -597,8 +597,8 @@ class Chat:
                 or a chit.Remote object with json_file and html_file attributes.
                 The one situation it may make sense to have it be a chit.Remote is to
                 specify the full remote of the cloned object, including the html file
-                -- make sure to use use_data_remote = False if you want to do this!
-            use_data_remote (bool): whether the remote path stored in the data has
+                -- make sure to use prioritize_data_remote = False if you want to do this!
+            prioritize_data_remote (bool): whether the remote path stored in the data has
                 priority compared to the path you're actually cloning from. Set to
                 False if e.g. you are cloning from a copy or move of the file in a
                 different folder or machine.
@@ -615,7 +615,7 @@ class Chat:
             data = json.load(f)
 
         data_remote_dict = data.get("remote", {})
-        if use_data_remote:
+        if prioritize_data_remote:
             # data_remote has priority
             updated_remote = Remote(**(remote_dict | data_remote_dict))
         else:

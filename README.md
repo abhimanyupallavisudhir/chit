@@ -149,6 +149,11 @@ chit.config.DISPLAY_CONFIG
 #     "css": ""
 # }
 # Configuration for gui visualization. Can be updated with the Chat-specific `display_config` attribute.
+
+chit.config.PRIORITIZE_DATA_REMOTE
+# default: False
+# whether the remote path stored in the data has priority compared to the path you're actually cloning from.
+# Set to False if e.g. you are cloning from a copy or move of the file in a different folder or machine.
 ```
 
 This is the first cell of my own personal chit notebook:
@@ -180,6 +185,7 @@ chit.config.VERBOSE = True
 chit.config.FORCE = True
 chit.config.AUTOSAVE = True
 chit.config.EDITOR = "code"
+chit.config.PRIORITIZE_DATA_REMOTE=False
 chit.config.DISPLAY_CONFIG = {
     "title": "chitChat",
     "author": "Abhimanyu Pallavi Sudhir",
