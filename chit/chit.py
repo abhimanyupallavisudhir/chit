@@ -63,6 +63,7 @@ class Chat:
         model: str = chit.config.DEFAULT_MODEL,
         tools: list[callable] | None = None,
         remote: str | Remote | None = None,
+        display_config: dict | None = None,
     ):
         """
         Initialize a chit.Chat. Any of the below attributes can be set normally later, e.g. `chat.remote = ...`.
@@ -73,11 +74,27 @@ class Chat:
                 - if you use this, streaming will be turned off. You can still pass `enable_tools=False` to `commit()` to disable tools for a single commit.
                 - each tool should be a function which either has a `json` attribute of type dict, or has a numpydoc docstring.
             remote (str or Remote): path to a json file to save the chat history to, or a chit.Remote object with json_file and html_file attributes.
+            display_config (dict): configuration for GUI visualization, e.g.
+
+            display_config={
+                "title": "My Chat",
+                "author": "Me",
+                "favicon": "path/to/favicon.ico",
+                "show_model": True,
+                "show_tools": True,
+                "max_tools": 3,
+                "css": \"\"\"
+                    .message { border: 2px solid #ddd; }
+                    .footer { background: #f0f0f0; }
+                \"\"\"
+            }
+
         """
         self.model = model
         self.remote: Remote | None = remote
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
+        self.display_config = chit.config.DISPLAY_CONFIG | (display_config or {})
 
         # Initialize with system message
         self.messages: dict[str, ChitMessage] = {
@@ -1089,7 +1106,7 @@ class Chat:
             file_path: Optional path where the HTML file should be saved.
                     If None, creates a temporary file instead.
         """
-        html_content = self._generate_viz_html(title=file_path or "chit conversation")
+        html_content = self._generate_viz_html()
 
         if file_path is not None:
             # Convert to Path object if string
@@ -1126,202 +1143,241 @@ class Chat:
             "root_id": self.root_id,
         }
 
-    def _generate_viz_html(self, title: str = "chit conversation") -> str:
+    def _generate_viz_html(self) -> str:
         """Generate the HTML for visualization."""
         data = self._prepare_messages_for_viz()
-        # From https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements:
-        # > The easiest and safest way to avoid the rather strange restrictions described in this section is to always 
-        # > escape an ASCII case-insensitive match for "<!--" as "\x3C!--", "<script" as "\x3Cscript", and "</script" 
-        # > as "\x3C/script" when these sequences appear in literals in scripts (e.g. in strings, regular expressions, 
-        # > or comments), and to avoid writing code that uses such constructs in expressions. Doing so avoids the 
-        # > pitfalls that the restrictions in this section are prone to triggering: namely, that, for historical 
-        # > reasons, parsing of script blocks in HTML is a strange and exotic practice that acts unintuitively in the 
-        # > face of these sequences.
         data_str = json.dumps(data).replace("</", "<\\/")
+        
+        self.display_config = getattr(self, "display_config", {})
+
+        # Get display configuration
+        display_title = self.display_config.get("title", "chit conversation")
+        author = self.display_config.get("author", "some worthless pencil pusher")
+        favicon = self.display_config.get("favicon", "")
+        show_model = self.display_config.get("show_model", False)
+        show_tools = self.display_config.get("show_tools", False)
+        max_tools = self.display_config.get("max_tools", None)
+        custom_css = self.display_config.get("css", "")
+
+        # Prepare author info
+        if show_model:
+            author_info = f"A conversation between {author} and {self.model}. "
+        else:
+            author_info = f"A conversation between {author} and his AI overlord. "
+
+        # Prepare tools info
+        tools_info = ""
+        if show_tools and self.tools:
+            tool_list = self.tools[:max_tools] if max_tools else self.tools
+            tools_str = ", ".join(f"`{t.__name__}`" for t in tool_list)
+            if max_tools and len(self.tools) > max_tools:
+                tools_str += f" and {len(self.tools) - max_tools} more"
+            tools_info = f"Available tools: {tools_str}"
+
         return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{title}</title>
-        <meta charset="UTF-8">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
-        <style>
-            body {{
-                font-family: system-ui, -apple-system, sans-serif;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-                background: #f5f5f5;
-            }}
-            .message {{
-                margin: 20px 0;
-                padding: 15px;
-                border-radius: 10px;
-                background: white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }}
-            .message.system {{ background: #f0f0f0; }}
-            .message.user {{ background: #f0f7ff; }}
-            .message.assistant {{ background: white; }}
-            .message-header {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-                font-size: 0.9em;
-                color: #666;
-            }}
-            select {{
-                padding: 4px;
-                border-radius: 4px;
-                border: 1px solid #ccc;
-            }}
-            .thumbnail {{
-                max-width: 200px;
-                max-height: 200px;
-                cursor: pointer;
-                margin: 10px 0;
-            }}
-            .current {{ border-left: 4px solid #007bff; }}
-            pre {{
-                background: #f8f9fa;
-                padding: 10px;
-                border-radius: 4px;
-                overflow-x: auto;
-            }}
-            code {{
-                font-family: monospace;
-                background: #f8f9fa;
-                padding: 2px 4px;
-                border-radius: 3px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div id="chat-container"></div>
-
-        <script>
-            const chatData = {data_str};
-            
-            marked.setOptions({{ breaks: true, gfm: true }});
-
-            function renderContent(content) {{
-                if (typeof content === 'string') return marked.parse(content);
-                
-                let html = '';
-                for (const item of content) {{
-                    if (item.type === 'text') {{
-                        html += marked.parse(item.text);
-                    }} else if (item.type === 'image_url') {{
-                        const url = item.image_url.url;
-                        html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
-                    }}
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{display_title} | chit</title>
+            <meta charset="UTF-8">
+            {'<link rel="icon" href="' + favicon + '">' if favicon else ''}
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+            <style>
+                body {{
+                    font-family: system-ui, -apple-system, sans-serif;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px 20px 60px 20px;  /* Added padding for footer */
+                    background: #f5f5f5;
                 }}
-                return html;
-            }}
-
-            function getMessagesFromRoot(startId) {{
-                let messages = [];
-                let currentId = startId;
-                
-                // First go back to root
-                while (currentId) {{
-                    const msg = chatData.messages[currentId];
-                    messages.unshift(msg);
-                    currentId = msg.parent_id;
+                .message {{
+                    margin: 20px 0;
+                    padding: 15px;
+                    border-radius: 10px;
+                    background: white;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    position: relative;  /* For absolute positioning of branch selector */
                 }}
-                
-                return messages;
-            }}
-
-            function getCompleteMessageChain(startId) {{
-                let messages = getMessagesFromRoot(startId);
-                
-                // Now follow home_branches forward
-                let currentMsg = messages[messages.length - 1];
-                while (currentMsg) {{
-                    // Get the next message following home_branch
-                    const children = currentMsg.children;
-                    const homeBranch = currentMsg.home_branch;
-                    const nextId = children[homeBranch];
-                    
-                    if (!nextId) break;  // Stop if no child on home_branch
-                    
-                    currentMsg = chatData.messages[nextId];
-                    messages.push(currentMsg);
+                .message.system {{ background: #f0f0f0; }}
+                .message.user {{ background: #f0f7ff; }}
+                .message.assistant {{ background: white; }}
+                .message-header {{
+                    margin-bottom: 10px;
+                    font-size: 0.9em;
+                    color: #666;
                 }}
-                
-                return messages;
-            }}
+                .branch-selector {{
+                    position: absolute;
+                    bottom: 15px;
+                    right: 15px;
+                }}
+                select {{
+                    padding: 4px;
+                    border-radius: 4px;
+                    border: 1px solid #ccc;
+                }}
+                .thumbnail {{
+                    max-width: 200px;
+                    max-height: 200px;
+                    cursor: pointer;
+                    margin: 10px 0;
+                }}
+                .current {{ border-left: 4px solid #007bff; }}
+                pre {{
+                    background: #f8f9fa;
+                    padding: 10px;
+                    border-radius: 4px;
+                    overflow-x: auto;
+                }}
+                code {{
+                    font-family: monospace;
+                    background: #f8f9fa;
+                    padding: 2px 4px;
+                    border-radius: 3px;
+                }}
+                .footer {{
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #fff;
+                    padding: 10px;
+                    text-align: center;
+                    border-top: 1px solid #eee;
+                }}
+                {custom_css}
+            </style>
+        </head>
+        <body>
+            <h1>{display_title}</h1>
+            <div class="info">
+                {author_info}
+                {f"{tools_info}<br>" if tools_info else ""}
+            </div>
+            <div id="chat-container"></div>
+            <div class="footer">
+                made with <a href="https://github.com/abhimanyupallavisudhir/chit">chit</a> by <a href="https://abhimanyu.io">Abhimanyu Pallavi Sudhir</a>
+            </div>
 
-            function onBranchSelect(messageId, selectedBranch) {{
-                console.log('Branch selected:', messageId, selectedBranch);
+            <script>
+                const chatData = {data_str};
                 
-                const msg = chatData.messages[messageId];
-                const childId = msg.children[selectedBranch];
-                
-                if (!childId) return;
-                
-                // Get complete chain including all home_branch children
-                chatData.current_id = childId;
-                renderMessages();
-            }}
+                marked.setOptions({{ breaks: true, gfm: true }});
 
-            function renderMessages() {{
-                console.log('Rendering messages, current_id:', chatData.current_id);
-                
-                const container = document.getElementById('chat-container');
-                container.innerHTML = '';
-                
-                const messages = getCompleteMessageChain(chatData.current_id);
-                console.log('Messages to render:', messages.map(m => m.id));
-                
-                messages.forEach(msg => {{
-                    const div = document.createElement('div');
-                    div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
+                function renderContent(content) {{
+                    if (typeof content === 'string') return marked.parse(content);
                     
-                    let branchHtml = '';
-                    if (msg.children && Object.keys(msg.children).length > 0) {{
-                        const branches = Object.entries(msg.children)
-                            .filter(([_, childId]) => childId !== null);
-                        
-                        if (branches.length > 0) {{
-                            const options = branches
-                                .map(([branch, childId]) => 
-                                    `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
-                                .join('');
-                            
-                            branchHtml = `
-                                <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
-                                        ${{branches.length === 1 ? 'disabled' : ''}}>
-                                    ${{options}}
-                                </select>
-                            `;
+                    let html = '';
+                    for (const item of content) {{
+                        if (item.type === 'text') {{
+                            html += marked.parse(item.text);
+                        }} else if (item.type === 'image_url') {{
+                            const url = item.image_url.url;
+                            html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
                         }}
-                    }}                    
-                    div.innerHTML = `
-                        <div class="message-header">
-                            <span>${{msg.message.role}}</span>
-                            ${{branchHtml}}
-                        </div>
-                        <div class="message-content">
-                            ${{renderContent(msg.message.content)}}
-                        </div>
-                    `;
-                    
-                    container.appendChild(div);
-                }});
-                
-                MathJax.typeset();
-            }}
+                    }}
+                    return html;
+                }}
 
-            // Initial render
-            renderMessages();
-        </script>
-    </body>
-    </html>
-    """
+                function getMessagesFromRoot(startId) {{
+                    let messages = [];
+                    let currentId = startId;
+                    
+                    // First go back to root
+                    while (currentId) {{
+                        const msg = chatData.messages[currentId];
+                        messages.unshift(msg);
+                        currentId = msg.parent_id;
+                    }}
+                    
+                    return messages;
+                }}
+
+                function getCompleteMessageChain(startId) {{
+                    let messages = getMessagesFromRoot(startId);
+                    
+                    // Now follow home_branches forward
+                    let currentMsg = messages[messages.length - 1];
+                    while (currentMsg) {{
+                        // Get the next message following home_branch
+                        const children = currentMsg.children;
+                        const homeBranch = currentMsg.home_branch;
+                        const nextId = children[homeBranch];
+                        
+                        if (!nextId) break;  // Stop if no child on home_branch
+                        
+                        currentMsg = chatData.messages[nextId];
+                        messages.push(currentMsg);
+                    }}
+                    
+                    return messages;
+                }}
+
+                function onBranchSelect(messageId, selectedBranch) {{
+                    const msg = chatData.messages[messageId];
+                    const childId = msg.children[selectedBranch];
+                    
+                    if (!childId) return;
+                    
+                    chatData.current_id = childId;
+                    renderMessages();
+                }}
+
+                function renderMessages() {{
+                    const container = document.getElementById('chat-container');
+                    container.innerHTML = '';
+                    
+                    const messages = getCompleteMessageChain(chatData.current_id);
+                    
+                    messages.forEach(msg => {{
+                        const div = document.createElement('div');
+                        div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
+                        
+                        let branchHtml = '';
+                        if (msg.children && Object.keys(msg.children).length > 0) {{
+                            const branches = Object.entries(msg.children)
+                                .filter(([_, childId]) => childId !== null);
+                            
+                            if (branches.length > 0) {{
+                                const options = branches
+                                    .map(([branch, childId]) => 
+                                        `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
+                                    .join('');
+                                
+                                branchHtml = `
+                                    <div class="branch-selector">
+                                        <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
+                                                ${{branches.length === 1 ? 'disabled' : ''}}>
+                                            ${{options}}
+                                        </select>
+                                    </div>
+                                `;
+                            }}
+                        }}
+                        
+                        div.innerHTML = `
+                            <div class="message-header">
+                                <span>${{msg.message.role}} (${{msg.id}})</span>
+                            </div>
+                            <div class="message-content">
+                                ${{renderContent(msg.message.content)}}
+                            </div>
+                            ${{branchHtml}}
+                        `;
+                        
+                        container.appendChild(div);
+                    }});
+                    
+                    MathJax.typeset();
+                }}
+
+                // Initial render
+                renderMessages();
+            </script>
+        </body>
+        </html>
+        """
 
     def log(self, style: Literal["tree", "forum", "gui"] = "tree"):
         if style == "tree":

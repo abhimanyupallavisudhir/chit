@@ -138,6 +138,17 @@ chit.config.EDITOR
 #     `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
 #     `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
 # can be overriden in commit by giving 
+
+chit.config.DISPLAY_CONFIG
+# default: {
+#     "title": "chitChat",
+#     "author": "some worthless pencil pusher",
+#     "show_model": True,
+#     "show_tools": True,
+#     "max_tools": 5,
+#     "css": ""
+# }
+# Configuration for gui visualization. Can be updated with the Chat-specific `display_config` attribute.
 ```
 
 This is the first cell of my own personal chit notebook:
@@ -169,6 +180,14 @@ chit.config.VERBOSE = True
 chit.config.FORCE = True
 chit.config.AUTOSAVE = True
 chit.config.EDITOR = "code"
+chit.config.DISPLAY_CONFIG = {
+    "title": "chitChat",
+    "author": "Abhimanyu Pallavi Sudhir",
+    "show_model": True,
+    "show_tools": True,
+    "max_tools": 5,
+    "css": ""
+}
 ```
 
 ## imports
@@ -188,12 +207,16 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [x] make pushing and cloning preserve as much as possible
 - [x] autosave feature
 - [x] fix html visualization issue
-- [ ] fix claude imports -- or maybe it's actually an issue with the visualization, let's see
 - [x] cleanup this repo
+- [ ] bugfixes 
+    - [ ] fix claude imports
+    - [ ] fix "dictionary size changed during iteration" issue when removing commit with a child and a blank child
 - [ ] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something.
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui
     - [ ] footer saying made with chit
+    - [ ] show commit IDs next to messages, etc.
+    - [ ] make sure display config is pushed and cloned
     - [ ] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
 - [ ] add imports from chatgpt, deepseek, xai, gemini, various LLM frontends etc. (only claude currently implemented)

@@ -31,3 +31,15 @@ default text editor to use for user input if user message is `^N` with no furthe
     `terminal-name$editor-name` for terminal editors, e.g. `^N/gnome-terminal$vim`.
     `$jupyter` to take input from a text area in the Jupyter notebook, i.e. `^N/$jupyter`.
 """
+
+DISPLAY_CONFIG = {
+    "title": "chitChat",
+    "author": "some worthless pencil pusher",
+    "show_model": True,
+    "show_tools": True,
+    "max_tools": 5,
+    "css": ""
+}
+"""
+Configuration for gui visualization. Can be updated with the Chat-specific `display_config` attribute.
+"""
