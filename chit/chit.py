@@ -510,11 +510,13 @@ class Chat:
 
         if self.remote.json_file is not None:
             data = self.asdict()
+            os.makedirs(os.path.dirname(self.remote.json_file), exist_ok=True)
             with open(self.remote.json_file, "w") as f:
                 json.dump(data, f)
 
         if self.remote.html_file is not None:
             html_content = self._generate_viz_html()
+            os.makedirs(os.path.dirname(self.remote.html_file), exist_ok=True)
             with open(self.remote.html_file, "w") as f:
                 f.write(html_content)
 
@@ -588,7 +590,9 @@ class Chat:
 
     @classmethod
     def clone(
-        cls, remote: str | Remote, prioritize_data_remote: bool = chit.config.PRIORITIZE_DATA_REMOTE
+        cls,
+        remote: str | Remote,
+        prioritize_data_remote: bool = chit.config.PRIORITIZE_DATA_REMOTE,
     ) -> "Chat":
         """Create new Chat instance from remote file
 
@@ -1134,7 +1138,7 @@ class Chat:
                 f.write(html_content)
                 temp_path = f.name
             webbrowser.open(f"file://{temp_path}")
-    
+
     def _prepare_messages_for_viz(self) -> dict[str, Any]:
         """Convert messages to a format suitable for visualization."""
         return {
@@ -1604,7 +1608,7 @@ class Chat:
         document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
         // Initialize theme based on configuration
-        {"document.body.classList.add('dark-mode'); document.getElementById('themeToggle').textContent = '☀️';" if self.display_config.get('dark', True) else ""}
+        {"document.body.classList.add('dark-mode'); document.getElementById('themeToggle').textContent = '☀️';" if self.display_config.get("dark", True) else ""}
 
 
         // Initial render
