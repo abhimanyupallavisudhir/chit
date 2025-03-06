@@ -217,7 +217,7 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [x] fix html visualization issue
 - [x] cleanup this repo
 - [ ] bugfixes 
-    - [ ] fix claude imports
+    - [x] fix claude imports
     - [ ] fix "dictionary size changed during iteration" issue when removing commit with a child and a blank child
 - [ ] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something.
 - [ ] html gui improvements
