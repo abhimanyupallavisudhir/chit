@@ -80,7 +80,7 @@ def import_claude(claude_export_path: str | Path, system_prompt: str = None) -> 
                 break
                 
         # Create a new branch if needed
-        if need_new_branch and branch_name == "master" and "master" in parent_msg.children and parent_msg.children["master"] is not None:
+        if need_new_branch and branch_name == "master":
             # We need to create a new branch
             branch_name = f"branch_{branch_counter}"
             branch_counter += 1
