@@ -1483,21 +1483,71 @@ class Chat:
         }}
 
         function getBranchHierarchy() {{
-            const branches = getAllBranches();
-            const hierarchy = {{}};
-            
-            branches.forEach(branch => {{
-                let parts = branch.split('_');
-                let current = hierarchy;
-                parts.forEach(part => {{
-                    if (!current[part]) {{
-                        current[part] = {{}};
+            // Start from root and traverse the tree to build actual branch relationships
+            const hierarchy = new Map();  // branch -> parent branch
+            const visited = new Set();
+
+            function traverse(messageId) {{
+                if (visited.has(messageId)) return;
+                visited.add(messageId);
+
+                const msg = chatData.messages[messageId];
+                const homeBranch = msg.home_branch;
+
+                // Check each child branch
+                Object.entries(msg.children).forEach(([childBranch, childId]) => {{
+                    if (childId && childBranch !== homeBranch) {{
+                        // This branch diverges here
+                        hierarchy.set(childBranch, homeBranch);
                     }}
-                    current = current[part];
+                    if (childId) {{
+                        traverse(childId);
+                    }}
                 }});
-            }});
-            
+            }}
+
+            traverse(chatData.root_id);
             return hierarchy;
+        }}
+
+        function renderGlobalBranchSelector() {{
+            const select = document.getElementById('globalBranchSelect');
+            const branchHierarchy = getBranchHierarchy();
+            
+            // Find root branches (those without parents or with 'master' as parent)
+            const branches = Array.from(branchHierarchy.keys());
+            const rootBranches = ['master', ...branches.filter(b => 
+                !branchHierarchy.has(b) || branchHierarchy.get(b) === 'master'
+            )];
+
+            function getBranchLevel(branch) {{
+                let level = 0;
+                let current = branch;
+                while (branchHierarchy.has(current)) {{
+                    level++;
+                    current = branchHierarchy.get(current);
+                }}
+                return level;
+            }}
+
+            function getChildren(parentBranch) {{
+                return branches.filter(b => branchHierarchy.get(b) === parentBranch);
+            }}
+
+            function renderBranch(branch, level) {{
+                const indent = '&nbsp;'.repeat(level * 2);
+                const selected = branch === chatData.current_branch ? 'selected' : '';
+                const option = `<option value="${{branch}}" ${{selected}}>${{indent}}${{branch}}</option>`;
+                
+                let html = option;
+                const children = getChildren(branch);
+                children.forEach(child => {{
+                    html += renderBranch(child, level + 1);
+                }});
+                return html;
+            }}
+
+            select.innerHTML = rootBranches.map(branch => renderBranch(branch, 0)).join('');
         }}
 
         function renderBranchOption(branch, level = 0) {{
@@ -1523,14 +1573,20 @@ class Chat:
         }}
 
         function onGlobalBranchSelect(branch) {{
-            // Get the tip of the selected branch
-            const branchTipId = Object.entries(chatData.messages).find(([_, msg]) => 
+            const branchTip = Object.entries(chatData.messages).find(([_, msg]) => 
                 msg.children[branch] === null
-            )[0];
+            );
             
-            chatData.current_id = branchTipId;
+            if (!branchTip) {{
+                console.error(`Could not find tip of branch ${{branch}}`);
+                return;
+            }}
+
+            chatData.current_id = branchTip[0];
+            chatData.current_branch = branch;
             renderMessages();
         }}
+
 
         // Theme toggle functionality
         function toggleTheme() {{
@@ -1554,7 +1610,7 @@ class Chat:
         renderMessages();
 
         // Call this after initial render
-        updateGlobalBranchSelector();
+        renderGlobalBranchSelector();
 
     </script>
 </body>
