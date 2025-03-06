@@ -45,6 +45,7 @@ DISPLAY_CONFIG = {
     "show_model": True,
     "show_tools": True,
     "max_tools": 5,
+    "dark": True,
     "css": ""
 }
 """

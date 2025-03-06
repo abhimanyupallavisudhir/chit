@@ -1546,6 +1546,10 @@ class Chat:
 
         document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
+        // Initialize theme based on configuration
+        {"document.body.classList.add('dark-mode'); document.getElementById('themeToggle').textContent = '☀️';" if self.display_config.get('dark', True) else ""}
+
+
         // Initial render
         renderMessages();
 
