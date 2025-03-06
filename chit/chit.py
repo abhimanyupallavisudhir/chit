@@ -1258,6 +1258,62 @@ class Chat:
             text-align: center;
             border-top: 1px solid #eee;
         }}
+
+        .footer {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }}
+
+        .global-branch-selector select {{
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }}
+
+        .theme-toggle button {{
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 5px;
+        }}
+
+        /* Dark mode styles */
+        body.dark-mode {{
+            background: #222;
+            color: #fff;
+        }}
+
+        body.dark-mode .message {{
+            background: #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }}
+
+        body.dark-mode .message.system {{ background: #2a2a2a; }}
+        body.dark-mode .message.user {{ background: #1a2635; }}
+        body.dark-mode .message.assistant {{ background: #333; }}
+
+        body.dark-mode .footer {{
+            background: #333;
+            border-top: 1px solid #444;
+        }}
+
+        body.dark-mode select {{
+            background: #444;
+            color: #fff;
+            border-color: #555;
+        }}
+
+        body.dark-mode code {{
+            background: #444;
+        }}
+
+        body.dark-mode pre {{
+            background: #444;
+        }}
+
         {custom_css}
     </style>
 </head>
@@ -1269,9 +1325,18 @@ class Chat:
     </div>
     <div id="chat-container"></div>
     <div class="footer">
-        made with <a href="https://github.com/abhimanyupallavisudhir/chit">chit</a> by <a href="https://abhimanyu.io">Abhimanyu Pallavi Sudhir</a>
+        <div class="global-branch-selector">
+            <select id="globalBranchSelect">
+                <!-- Will be populated via JavaScript -->
+            </select>
+        </div>
+        <span class="footer-text">
+            made with <a href="https://github.com/abhimanyupallavisudhir/chit">chit</a> by <a href="https://abhimanyu.io">Abhimanyu Pallavi Sudhir</a>
+        </span>
+        <div class="theme-toggle">
+            <button id="themeToggle">🌙</button>
+        </div>
     </div>
-
     <script>
         // Very first thing - basic logging
         console.log('Script started');
@@ -1407,8 +1472,86 @@ class Chat:
             MathJax.typeset();
         }}
 
+        function getAllBranches() {{
+            const branches = new Set();
+            Object.values(chatData.messages).forEach(msg => {{
+                Object.keys(msg.children).forEach(branch => {{
+                    branches.add(branch);
+                }});
+            }});
+            return Array.from(branches);
+        }}
+
+        function getBranchHierarchy() {{
+            const branches = getAllBranches();
+            const hierarchy = {{}};
+            
+            branches.forEach(branch => {{
+                let parts = branch.split('_');
+                let current = hierarchy;
+                parts.forEach(part => {{
+                    if (!current[part]) {{
+                        current[part] = {{}};
+                    }}
+                    current = current[part];
+                }});
+            }});
+            
+            return hierarchy;
+        }}
+
+        function renderBranchOption(branch, level = 0) {{
+            return `<option value="${{branch}}" ${{branch === chatData.current_branch ? 'selected' : ''}}>
+                ${{'&nbsp;'.repeat(level * 2)}}${{branch}}
+            </option>`;
+        }}
+
+        function updateGlobalBranchSelector() {{
+            const select = document.getElementById('globalBranchSelect');
+            const hierarchy = getBranchHierarchy();
+            
+            function addBranchOptions(obj, prefix = '', level = 0) {{
+                Object.keys(obj).forEach(branch => {{
+                    const fullBranch = prefix ? `${{prefix}}_${{branch}}` : branch;
+                    select.innerHTML += renderBranchOption(fullBranch, level);
+                    addBranchOptions(obj[branch], fullBranch, level + 1);
+                }});
+            }}
+            
+            select.innerHTML = '';
+            addBranchOptions(hierarchy);
+        }}
+
+        function onGlobalBranchSelect(branch) {{
+            // Get the tip of the selected branch
+            const branchTipId = Object.entries(chatData.messages).find(([_, msg]) => 
+                msg.children[branch] === null
+            )[0];
+            
+            chatData.current_id = branchTipId;
+            renderMessages();
+        }}
+
+        // Theme toggle functionality
+        function toggleTheme() {{
+            document.body.classList.toggle('dark-mode');
+            const button = document.getElementById('themeToggle');
+            button.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        }}
+
+        // Add event listeners
+        document.getElementById('globalBranchSelect').addEventListener('change', (e) => {{
+            onGlobalBranchSelect(e.target.value);
+        }});
+
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
         // Initial render
         renderMessages();
+
+        // Call this after initial render
+        updateGlobalBranchSelector();
+
     </script>
 </body>
 </html>
