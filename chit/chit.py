@@ -1134,7 +1134,7 @@ class Chat:
                 f.write(html_content)
                 temp_path = f.name
             webbrowser.open(f"file://{temp_path}")
-
+    
     def _prepare_messages_for_viz(self) -> dict[str, Any]:
         """Convert messages to a format suitable for visualization."""
         return {
@@ -1187,210 +1187,246 @@ class Chat:
                 tools_str += f" and {len(self.tools_) - max_tools} more"
             tools_info = f"Available tools: {tools_str}"
 
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>{display_title} | chit</title>
-            <meta charset="UTF-8">
-            {'<link rel="icon" href="' + favicon + '">' if favicon else ""}
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
-            <style>
-                body {{
-                    font-family: system-ui, -apple-system, sans-serif;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 20px 20px 60px 20px;  /* Added padding for footer */
-                    background: #f5f5f5;
-                }}
-                .message {{
-                    margin: 20px 0;
-                    padding: 15px;
-                    border-radius: 10px;
-                    background: white;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    position: relative;  /* For absolute positioning of branch selector */
-                }}
-                .message.system {{ background: #f0f0f0; }}
-                .message.user {{ background: #f0f7ff; }}
-                .message.assistant {{ background: white; }}
-                .message-header {{
-                    margin-bottom: 10px;
-                    font-size: 0.9em;
-                    color: #666;
-                }}
-                .branch-selector {{
-                    position: absolute;
-                    bottom: 15px;
-                    right: 15px;
-                }}
-                select {{
-                    padding: 4px;
-                    border-radius: 4px;
-                    border: 1px solid #ccc;
-                }}
-                .thumbnail {{
-                    max-width: 200px;
-                    max-height: 200px;
-                    cursor: pointer;
-                    margin: 10px 0;
-                }}
-                .current {{ border-left: 4px solid #007bff; }}
-                pre {{
-                    background: #f8f9fa;
-                    padding: 10px;
-                    border-radius: 4px;
-                    overflow-x: auto;
-                }}
-                code {{
-                    font-family: monospace;
-                    background: #f8f9fa;
-                    padding: 2px 4px;
-                    border-radius: 3px;
-                }}
-                .footer {{
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
-                    background: #fff;
-                    padding: 10px;
-                    text-align: center;
-                    border-top: 1px solid #eee;
-                }}
-                {custom_css}
-            </style>
-        </head>
-        <body>
-            <h1>{display_title}</h1>
-            <div class="info">
-                {author_info}
-                {f"{tools_info}<br>" if tools_info else ""}
-            </div>
-            <div id="chat-container"></div>
-            <div class="footer">
-                made with <a href="https://github.com/abhimanyupallavisudhir/chit">chit</a> by <a href="https://abhimanyu.io">Abhimanyu Pallavi Sudhir</a>
-            </div>
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>{display_title} | chit</title>
+    <meta charset="UTF-8">
+    {'<link rel="icon" href="' + favicon + '">' if favicon else ""}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {{
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 20px 60px 20px;  /* Added padding for footer */
+            background: #f5f5f5;
+        }}
+        .message {{
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;  /* For absolute positioning of branch selector */
+        }}
+        .message.system {{ background: #f0f0f0; }}
+        .message.user {{ background: #f0f7ff; }}
+        .message.assistant {{ background: white; }}
+        .message-header {{
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }}
+        .branch-selector {{
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+        }}
+        select {{
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }}
+        .thumbnail {{
+            max-width: 200px;
+            max-height: 200px;
+            cursor: pointer;
+            margin: 10px 0;
+        }}
+        .current {{ border-left: 4px solid #007bff; }}
+        pre {{
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }}
+        code {{
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }}
+        .footer {{
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }}
+        {custom_css}
+    </style>
+</head>
+<body>
+    <h1>{display_title}</h1>
+    <div class="info">
+        {author_info}
+        {f"{tools_info}<br>" if tools_info else ""}
+    </div>
+    <div id="chat-container"></div>
+    <div class="footer">
+        made with <a href="https://github.com/abhimanyupallavisudhir/chit">chit</a> by <a href="https://abhimanyu.io">Abhimanyu Pallavi Sudhir</a>
+    </div>
 
-            <script>
-                const chatData = {data_str};
+    <script>
+        // Very first thing - basic logging
+        console.log('Script started');
+
+        const chatData = {data_str};
+
+        console.log('Data parsed successfully');
+
+        Promise.all([
+            new Promise(resolve => {{
+                if (typeof marked !== 'undefined') resolve();
+                else document.addEventListener('marked-load', resolve);
+            }}),
+            new Promise(resolve => {{
+                if (typeof MathJax !== 'undefined') resolve();
+                else window.MathJax = {{ startup: {{ ready: resolve }} }};
+            }})
+        ]).then(() => {{
+            console.log('Dependencies loaded');
+
+        
+            marked.setOptions({{ breaks: true, gfm: true }});
+
+            function renderContent(content) {{
+                if (typeof content === 'string') return marked.parse(content);
                 
-                marked.setOptions({{ breaks: true, gfm: true }});
-
-                function renderContent(content) {{
-                    if (typeof content === 'string') return marked.parse(content);
-                    
-                    let html = '';
-                    for (const item of content) {{
-                        if (item.type === 'text') {{
-                            html += marked.parse(item.text);
-                        }} else if (item.type === 'image_url') {{
-                            const url = item.image_url.url;
-                            html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
-                        }}
+                let html = '';
+                for (const item of content) {{
+                    if (item.type === 'text') {{
+                        html += marked.parse(item.text);
+                    }} else if (item.type === 'image_url') {{
+                        const url = item.image_url.url;
+                        html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
                     }}
-                    return html;
                 }}
+                return html;
+            }}
 
-                function getMessagesFromRoot(startId) {{
-                    let messages = [];
-                    let currentId = startId;
-                    
-                    // First go back to root
-                    while (currentId) {{
-                        const msg = chatData.messages[currentId];
-                        messages.unshift(msg);
-                        currentId = msg.parent_id;
-                    }}
-                    
-                    return messages;
+            function getMessagesFromRoot(startId) {{
+                console.log('getMessagesFromRoot called with startId:', startId);
+                let messages = [];
+                let currentId = startId;
+                
+                // First go back to root
+                while (currentId) {{
+                    const msg = chatData.messages[currentId];
+                    console.log('Processing message:', msg);
+                    messages.unshift(msg);
+                    currentId = msg.parent_id;
                 }}
+                
+                console.log('Messages from root:', messages);
+                return messages;
+            }}
 
-                function getCompleteMessageChain(startId) {{
-                    let messages = getMessagesFromRoot(startId);
+            function getCompleteMessageChain(startId) {{
+                console.log('getCompleteMessageChain called with startId:', startId);
+                let messages = getMessagesFromRoot(startId);
+                
+                // Now follow home_branches forward
+                let currentMsg = messages[messages.length - 1];
+                console.log('Starting forward traversal from:', currentMsg);
+                
+                while (currentMsg) {{
+                    // Get the next message following home_branch
+                    const children = currentMsg.children;
+                    const homeBranch = currentMsg.home_branch;
+                    const nextId = children[homeBranch];
                     
-                    // Now follow home_branches forward
-                    let currentMsg = messages[messages.length - 1];
-                    while (currentMsg) {{
-                        // Get the next message following home_branch
-                        const children = currentMsg.children;
-                        const homeBranch = currentMsg.home_branch;
-                        const nextId = children[homeBranch];
-                        
-                        if (!nextId) break;  // Stop if no child on home_branch
-                        
-                        currentMsg = chatData.messages[nextId];
-                        messages.push(currentMsg);
-                    }}
+                    console.log('Current message:', currentMsg.id);
+                    console.log('Home branch:', homeBranch);
+                    console.log('Children:', children);
+                    console.log('Next ID:', nextId);
                     
-                    return messages;
+                    if (!nextId) break;  // Stop if no child on home_branch
+                    
+                    currentMsg = chatData.messages[nextId];
+                    messages.push(currentMsg);
                 }}
+                
+                console.log('Final message chain:', messages);
+                return messages;
+            }}
 
-                function onBranchSelect(messageId, selectedBranch) {{
-                    const msg = chatData.messages[messageId];
-                    const childId = msg.children[selectedBranch];
-                    
-                    if (!childId) return;
-                    
-                    chatData.current_id = childId;
-                    renderMessages();
-                }}
-
-                function renderMessages() {{
-                    const container = document.getElementById('chat-container');
-                    container.innerHTML = '';
-                    
-                    const messages = getCompleteMessageChain(chatData.current_id);
-                    
-                    messages.forEach(msg => {{
-                        const div = document.createElement('div');
-                        div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
-                        
-                        let branchHtml = '';
-                        if (msg.children && Object.keys(msg.children).length > 0) {{
-                            const branches = Object.entries(msg.children)
-                                .filter(([_, childId]) => childId !== null);
-                            
-                            if (branches.length > 0) {{
-                                const options = branches
-                                    .map(([branch, childId]) => 
-                                        `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
-                                    .join('');
-                                
-                                branchHtml = `
-                                    <div class="branch-selector">
-                                        <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
-                                                ${{branches.length === 1 ? 'disabled' : ''}}>
-                                            ${{options}}
-                                        </select>
-                                    </div>
-                                `;
-                            }}
-                        }}
-                        
-                        div.innerHTML = `
-                            <div class="message-header">
-                                <span>${{msg.message.role}} (${{msg.id}})</span>
-                            </div>
-                            <div class="message-content">
-                                ${{renderContent(msg.message.content)}}
-                            </div>
-                            ${{branchHtml}}
-                        `;
-                        
-                        container.appendChild(div);
-                    }});
-                    
-                    MathJax.typeset();
-                }}
-
-                // Initial render
+            function onBranchSelect(messageId, selectedBranch) {{
+                const msg = chatData.messages[messageId];
+                const childId = msg.children[selectedBranch];
+                
+                if (!childId) return;
+                
+                chatData.current_id = childId;
                 renderMessages();
-            </script>
-        </body>
-        </html>
-        """
+            }}
+
+            function renderMessages() {{
+                console.log('renderMessages called');
+                console.log('chatData:', chatData);
+                console.log('current_id:', chatData.current_id);
+                
+                const container = document.getElementById('chat-container');
+                container.innerHTML = '';
+                
+                const messages = getCompleteMessageChain(chatData.current_id);
+                console.log('Messages to render:', messages);
+                
+                messages.forEach(msg => {{
+                    console.log('Rendering message:', msg);
+                    const div = document.createElement('div');
+                    div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
+                    
+                    let branchHtml = '';
+                    if (msg.children && Object.keys(msg.children).length > 0) {{
+                        const branches = Object.entries(msg.children)
+                            .filter(([_, childId]) => childId !== null);
+                        
+                        if (branches.length > 0) {{
+                            const options = branches
+                                .map(([branch, childId]) => 
+                                    `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
+                                .join('');
+                            
+                            branchHtml = `
+                                <div class="branch-selector">
+                                    <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
+                                            ${{branches.length === 1 ? 'disabled' : ''}}>
+                                        ${{options}}
+                                    </select>
+                                </div>
+                            `;
+                        }}
+                    }}
+                    
+                    div.innerHTML = `
+                        <div class="message-header">
+                            <span>${{msg.message.role}} (${{msg.id}})</span>
+                        </div>
+                        <div class="message-content">
+                            ${{renderContent(msg.message.content)}}
+                        </div>
+                        ${{branchHtml}}
+                    `;
+                    
+                    container.appendChild(div);
+                }});
+                
+                MathJax.typeset();
+            }}
+
+            // Initial render
+            renderMessages();
+        }});
+    </script>
+</body>
+</html>
+"""
 
     def log(self, style: Literal["tree", "forum", "gui"] = "tree"):
         if style == "tree":
