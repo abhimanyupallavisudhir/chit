@@ -1151,6 +1151,7 @@ class Chat:
                 for k, m in self.messages.items()
             },
             "current_id": self.current_id,
+            "current_branch": self.current_branch,
             "root_id": self.root_id,
         }
 
