@@ -1279,150 +1279,136 @@ class Chat:
         const chatData = {data_str};
 
         console.log('Data parsed successfully');
-
-        Promise.all([
-            new Promise(resolve => {{
-                if (typeof marked !== 'undefined') resolve();
-                else document.addEventListener('marked-load', resolve);
-            }}),
-            new Promise(resolve => {{
-                if (typeof MathJax !== 'undefined') resolve();
-                else window.MathJax = {{ startup: {{ ready: resolve }} }};
-            }})
-        ]).then(() => {{
-            console.log('Dependencies loaded');
-
         
-            marked.setOptions({{ breaks: true, gfm: true }});
+        marked.setOptions({{ breaks: true, gfm: true }});
 
-            function renderContent(content) {{
-                if (typeof content === 'string') return marked.parse(content);
-                
-                let html = '';
-                for (const item of content) {{
-                    if (item.type === 'text') {{
-                        html += marked.parse(item.text);
-                    }} else if (item.type === 'image_url') {{
-                        const url = item.image_url.url;
-                        html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
-                    }}
+        function renderContent(content) {{
+            if (typeof content === 'string') return marked.parse(content);
+            
+            let html = '';
+            for (const item of content) {{
+                if (item.type === 'text') {{
+                    html += marked.parse(item.text);
+                }} else if (item.type === 'image_url') {{
+                    const url = item.image_url.url;
+                    html += `<img src="${{url}}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="Click to view full size">`;
                 }}
-                return html;
             }}
+            return html;
+        }}
 
-            function getMessagesFromRoot(startId) {{
-                console.log('getMessagesFromRoot called with startId:', startId);
-                let messages = [];
-                let currentId = startId;
-                
-                // First go back to root
-                while (currentId) {{
-                    const msg = chatData.messages[currentId];
-                    console.log('Processing message:', msg);
-                    messages.unshift(msg);
-                    currentId = msg.parent_id;
-                }}
-                
-                console.log('Messages from root:', messages);
-                return messages;
+        function getMessagesFromRoot(startId) {{
+            console.log('getMessagesFromRoot called with startId:', startId);
+            let messages = [];
+            let currentId = startId;
+            
+            // First go back to root
+            while (currentId) {{
+                const msg = chatData.messages[currentId];
+                console.log('Processing message:', msg);
+                messages.unshift(msg);
+                currentId = msg.parent_id;
             }}
+            
+            console.log('Messages from root:', messages);
+            return messages;
+        }}
 
-            function getCompleteMessageChain(startId) {{
-                console.log('getCompleteMessageChain called with startId:', startId);
-                let messages = getMessagesFromRoot(startId);
+        function getCompleteMessageChain(startId) {{
+            console.log('getCompleteMessageChain called with startId:', startId);
+            let messages = getMessagesFromRoot(startId);
+            
+            // Now follow home_branches forward
+            let currentMsg = messages[messages.length - 1];
+            console.log('Starting forward traversal from:', currentMsg);
+            
+            while (currentMsg) {{
+                // Get the next message following home_branch
+                const children = currentMsg.children;
+                const homeBranch = currentMsg.home_branch;
+                const nextId = children[homeBranch];
                 
-                // Now follow home_branches forward
-                let currentMsg = messages[messages.length - 1];
-                console.log('Starting forward traversal from:', currentMsg);
+                console.log('Current message:', currentMsg.id);
+                console.log('Home branch:', homeBranch);
+                console.log('Children:', children);
+                console.log('Next ID:', nextId);
                 
-                while (currentMsg) {{
-                    // Get the next message following home_branch
-                    const children = currentMsg.children;
-                    const homeBranch = currentMsg.home_branch;
-                    const nextId = children[homeBranch];
-                    
-                    console.log('Current message:', currentMsg.id);
-                    console.log('Home branch:', homeBranch);
-                    console.log('Children:', children);
-                    console.log('Next ID:', nextId);
-                    
-                    if (!nextId) break;  // Stop if no child on home_branch
-                    
-                    currentMsg = chatData.messages[nextId];
-                    messages.push(currentMsg);
-                }}
+                if (!nextId) break;  // Stop if no child on home_branch
                 
-                console.log('Final message chain:', messages);
-                return messages;
+                currentMsg = chatData.messages[nextId];
+                messages.push(currentMsg);
             }}
+            
+            console.log('Final message chain:', messages);
+            return messages;
+        }}
 
-            function onBranchSelect(messageId, selectedBranch) {{
-                const msg = chatData.messages[messageId];
-                const childId = msg.children[selectedBranch];
-                
-                if (!childId) return;
-                
-                chatData.current_id = childId;
-                renderMessages();
-            }}
-
-            function renderMessages() {{
-                console.log('renderMessages called');
-                console.log('chatData:', chatData);
-                console.log('current_id:', chatData.current_id);
-                
-                const container = document.getElementById('chat-container');
-                container.innerHTML = '';
-                
-                const messages = getCompleteMessageChain(chatData.current_id);
-                console.log('Messages to render:', messages);
-                
-                messages.forEach(msg => {{
-                    console.log('Rendering message:', msg);
-                    const div = document.createElement('div');
-                    div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
-                    
-                    let branchHtml = '';
-                    if (msg.children && Object.keys(msg.children).length > 0) {{
-                        const branches = Object.entries(msg.children)
-                            .filter(([_, childId]) => childId !== null);
-                        
-                        if (branches.length > 0) {{
-                            const options = branches
-                                .map(([branch, childId]) => 
-                                    `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
-                                .join('');
-                            
-                            branchHtml = `
-                                <div class="branch-selector">
-                                    <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
-                                            ${{branches.length === 1 ? 'disabled' : ''}}>
-                                        ${{options}}
-                                    </select>
-                                </div>
-                            `;
-                        }}
-                    }}
-                    
-                    div.innerHTML = `
-                        <div class="message-header">
-                            <span>${{msg.message.role}} (${{msg.id}})</span>
-                        </div>
-                        <div class="message-content">
-                            ${{renderContent(msg.message.content)}}
-                        </div>
-                        ${{branchHtml}}
-                    `;
-                    
-                    container.appendChild(div);
-                }});
-                
-                MathJax.typeset();
-            }}
-
-            // Initial render
+        function onBranchSelect(messageId, selectedBranch) {{
+            const msg = chatData.messages[messageId];
+            const childId = msg.children[selectedBranch];
+            
+            if (!childId) return;
+            
+            chatData.current_id = childId;
             renderMessages();
-        }});
+        }}
+
+        function renderMessages() {{
+            console.log('renderMessages called');
+            console.log('chatData:', chatData);
+            console.log('current_id:', chatData.current_id);
+            
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '';
+            
+            const messages = getCompleteMessageChain(chatData.current_id);
+            console.log('Messages to render:', messages);
+            
+            messages.forEach(msg => {{
+                console.log('Rendering message:', msg);
+                const div = document.createElement('div');
+                div.className = `message ${{msg.message.role}} ${{msg.id === chatData.current_id ? 'current' : ''}}`;
+                
+                let branchHtml = '';
+                if (msg.children && Object.keys(msg.children).length > 0) {{
+                    const branches = Object.entries(msg.children)
+                        .filter(([_, childId]) => childId !== null);
+                    
+                    if (branches.length > 0) {{
+                        const options = branches
+                            .map(([branch, childId]) => 
+                                `<option value="${{branch}}" ${{childId === messages[messages.indexOf(msg) + 1]?.id ? 'selected' : ''}}>${{branch}}</option>`)
+                            .join('');
+                        
+                        branchHtml = `
+                            <div class="branch-selector">
+                                <select onchange="onBranchSelect('${{msg.id}}', this.value)" 
+                                        ${{branches.length === 1 ? 'disabled' : ''}}>
+                                    ${{options}}
+                                </select>
+                            </div>
+                        `;
+                    }}
+                }}
+                
+                div.innerHTML = `
+                    <div class="message-header">
+                        <span>${{msg.message.role}} (${{msg.id}})</span>
+                    </div>
+                    <div class="message-content">
+                        ${{renderContent(msg.message.content)}}
+                    </div>
+                    ${{branchHtml}}
+                `;
+                
+                container.appendChild(div);
+            }});
+            
+            MathJax.typeset();
+        }}
+
+        // Initial render
+        renderMessages();
     </script>
 </body>
 </html>
