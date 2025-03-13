@@ -56,10 +56,32 @@ class ChitMessage:
         }
 
 
-@dataclass
 class Remote:
-    json_file: str | None = None
-    html_file: str | None = None
+    def __init__(self, json_file: str | None = None, html_file: str | None = None):
+        """
+        Initialize a chit.Remote object. This object is used to specify where to save the chat history.
+
+        Arguments:
+            json_file (str): either:
+                path/to/file.json (str)
+                path/to/file (str), interpreted as Remote("path/to/file.json", "path/to/file.html")
+            html_file (str): path to the html file to save the chat history to. If json_file does not
+                end with .json, this should be left blank to automatically infer it
+        """
+        if json_file is None and html_file is None:
+            raise ValueError("At least one of json_file or html_file must be specified")
+        if html_file:
+            assert json_file.endswith(".json"), f"Attempted to initialize invalid remote: Remote({json_file}, {html_file})"
+            self.json_file = json_file
+            self.html_file = html_file
+        else:
+            if not json_file.endswith(".json"):
+                # interpret as creating both json and html
+                json_file = json_file + ".json"
+                html_file = json_file + ".html"
+            print(f"Initializing Remote({json_file}, {html_file})")
+            self.json_file = json_file
+            self.html_file = html_file
 
 
 class Chat:
@@ -79,6 +101,7 @@ class Chat:
                 - if you use this, streaming will be turned off. You can still pass `enable_tools=False` to `commit()` to disable tools for a single commit.
                 - each tool should be a function which either has a `json` attribute of type dict, or has a numpydoc docstring.
             remote (str or Remote): path to a json file to save the chat history to, or a chit.Remote object with json_file and html_file attributes.
+                attribute will automatically be calculated from the remote argument passed; see Remote.__init__ for more details.
             display_config (dict): configuration for GUI visualization, e.g.
 
             display_config={
@@ -138,7 +161,7 @@ class Chat:
     @remote.setter
     def remote(self, value):
         if isinstance(value, str):
-            value = Remote(json_file=value)
+            value = Remote(value)
         self._remote = value
 
     def backup(self):
@@ -597,7 +620,11 @@ class Chat:
         """Create new Chat instance from remote file
 
         Arguments:
-            remote (str or Remote): path to a json file to load the chat history from,
+            remote (str or Remote): where to load chat history from. Can be:
+                    - /path/to/file.json (str)
+                    - /path/to/file (str), interpreted as Remote("/path/to/file.json", "/path/to/file.html")
+                    - Remote("/path/to/file.json", "/path/to/file.html")
+                    - ("/path/to/file.json", "/path/to/file.html") (tuple) -- interpreted as Remote object
                 or a chit.Remote object with json_file and html_file attributes.
                 The one situation it may make sense to have it be a chit.Remote is to
                 specify the full remote of the cloned object, including the html file
@@ -608,12 +635,23 @@ class Chat:
                 different folder or machine.
 
         """
+        if isinstance(remote, tuple):
+            remote = Remote(*remote)
         if isinstance(remote, Remote):
             remote_str: str = remote.json_file
             remote_dict: dict = vars(remote)
+        elif isinstance(remote, str):
+            if remote.endswith(".json"):
+                remote_str: str = remote
+                remote_dict: dict = {"json_file": remote_str}
+            else:
+                # interpret as creating both json and html
+                remote_str: str = remote + ".json"
+                remote_dict: dict = {"json_file": remote_str, "html_file": remote + ".html"}
         else:
-            remote_str: str = remote
-            remote_dict: dict = {"json_file": remote_str}
+            raise ValueError(
+                f"unrecognized remote type {type(remote)}; must be str, Remote or tuple"
+            )
 
         with open(remote_str, "r") as f:
             data = json.load(f)
