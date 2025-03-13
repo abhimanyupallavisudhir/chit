@@ -76,8 +76,9 @@ class Remote:
         else:
             if not json_file.endswith(".json"):
                 # interpret as creating both json and html
+                _json_file = json_file
                 json_file = json_file + ".json"
-                html_file = json_file + ".html"
+                html_file = _json_file + ".html"
             print(f"Initializing Remote({json_file}, {html_file})")
             self.json_file = json_file
             self.html_file = html_file
