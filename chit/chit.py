@@ -165,6 +165,9 @@ class Chat:
         self._remote = value
 
     def backup(self):
+        """
+        Save the chat history to the remote, if one is set and autosave is enabled.
+        """
         if chit.config.AUTOSAVE and self.remote is not None:
             self.push()
 
@@ -213,6 +216,16 @@ class Chat:
         role: str = None,
         enable_tools=True,
     ) -> str:
+        """
+        Commit a message to the chat history.
+
+        Arguments:
+            message (str): message content
+            image_path (str or Path): path to an image to include in the message
+            role (str): role of the message (user, assistant, system, tool)
+            enable_tools (bool): turn off to disable tool use in a chat that
+                otherwise has tools (e.g. to enable streaming)
+        """
         if message and message.startswith("^N"):
             # Parse editor specification
             editor_spec = message[2:].strip("/ ")
@@ -405,7 +418,12 @@ class Chat:
         self.backup()
 
     def show(self, message_id: str, mode: Literal["print", "return"] = "print") -> None | str:
-        """Print the content of a message."""
+        """Print the content of a message.
+        
+        Arguments:
+            message_id (str): ID of the message to show
+            mode (str): whether to print the content or return it. 
+        """
         content = self[message_id].message["content"]
         if mode == "print":
             print(content)
@@ -475,6 +493,16 @@ class Chat:
         message_id: Optional[str | int | list[str]] = None,
         branch_name: Optional[str] = None,
     ) -> None:
+        """Checkout to a specific message or branch
+        
+        Arguments:
+            message_id (str, int, list[str]): ID of the message to checkout to. Can be:
+                - message ID (str)
+                - non-negative index (int) to count back from the root
+                - negative index (int) to count back from the current message
+                - list of branch names to follow forward from the current message
+            branch_name (str): name of the branch to checkout to
+        """
         if message_id is not None:
             if isinstance(message_id, int):
                 if message_id >= 0:
@@ -892,6 +920,16 @@ class Chat:
     def rm(
         self, commit_id: str | int | None = None, branch_name: str | None = None
     ) -> None:
+        """
+        Remove a commit or branch.
+
+        Args:
+            commit_id (str | int | None): ID (or alternate indexing) of the commit to remove. 
+                If None, branch_name must be specified.
+            branch_name (str | None): Name of the branch to remove. If None, commit_id must 
+                be specified.
+        
+        """
         if isinstance(commit_id, int):
             # allow negative and positive indices
             if commit_id > 0:
@@ -913,7 +951,12 @@ class Chat:
         self.backup()
 
     def mv(self, branch_name_old: str, branch_name_new: str) -> None:
-        """Rename a branch throughout the tree."""
+        """Rename a branch throughout the tree.
+        
+        Args:
+            branch_name_old (str): Name of the branch to rename
+            branch_name_new (str): New name for the branch
+        """
         if branch_name_new in self.branch_tips:
             raise ValueError(f"Branch '{branch_name_new}' already exists")
 
@@ -1079,6 +1122,7 @@ class Chat:
         """
         Generate a tree visualization of the conversation history, like this:
 
+        ```
         001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
                       ├─bb2b2b──adaf938 (features)
                       |       └─f2f2f2*──aa837r (design_discussion*)
@@ -1086,7 +1130,7 @@ class Chat:
                       |                        └ (tree_viz_help)
                       └─r228df──f2f2f2 (publishing)
                               └─j38392──b16327 (pypi)
-
+        ```
         """
         log_lines: list[str] = self._log_tree_draw_from(self.root_id, "master")
         res = "\n".join(log_lines)
@@ -1137,6 +1181,7 @@ class Chat:
         """
         Generate a forum-style visualization of the conversation history, like this:
 
+        ```
         [S] 001e1e: You are a helpful assista...
             [U] ab2839: Hello I am Dr James and I...
                 [A] 29239b: Hello Dr James, how can I...
@@ -1152,6 +1197,7 @@ class Chat:
                     [U] f2f2f2: Ok that worked. Now let's pu... (publishing)
                     [U] j38392: How do I authenticate with p...
                         [A] b16327: Since you are working with g... (pypi)
+        ```
         """
         log_lines: list[str] = self._log_forum_draw_from(self.root_id)
         res = "\n".join(log_lines)
@@ -1673,6 +1719,47 @@ class Chat:
 """
 
     def log(self, style: Literal["tree", "forum", "gui"] = "tree", mode: Literal["print", "return"] = "print") -> None | str:
+        """
+        Generate a visualization of the conversation history.
+
+        style="tree" looks like this:
+        
+        ```
+        001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
+                      ├─bb2b2b──adaf938 (features)
+                      |       └─f2f2f2*──aa837r (design_discussion*)
+                      |                        ├ (flask_help)
+                      |                        └ (tree_viz_help)
+                      └─r228df──f2f2f2 (publishing)
+                              └─j38392──b16327 (pypi)
+        ```
+        
+        style="forum" looks like this:
+        
+        ```
+        [S] 001e1e: You are a helpful assista...
+            [U] ab2839: Hello I am Dr James and I...
+                [A] 29239b: Hello Dr James, how can I...
+                    [U] f2foif9: I am trying to use the...
+                        [A] f2f2f2: Have you tried using... (master)
+                [A] bb2b2b: Hello Dr James, I see you...
+                    [U] adaf938: Can we implement the featur... (features)
+                    [U*] f2f2f2: This is actually a design issue...
+                        [A] aa837r: Sure, I'll help you design a React... (design_discussion*)
+                            (flask_help)
+                            (tree_viz_help)
+                [A] r228df: I see you are working on the...
+                    [U] f2f2f2: Ok that worked. Now let's pu... (publishing)
+                    [U] j38392: How do I authenticate with p...
+                        [A] b16327: Since you are working with g... (pypi)
+        ```
+
+        style="gui" opens a GUI visualization in the browser.
+        
+        Args:
+            style (str): Style of visualization ("tree", "forum", "gui")
+            mode (str): Whether to print the visualization or return it as a string"
+        """
         if mode == "print":
             if style == "tree":
                 print(self._log_tree())
@@ -1692,6 +1779,13 @@ class Chat:
 
     @classmethod
     def migrate(cls, json_file: str, format: Literal["claude"] = "claude") -> "Chat":
+        """"
+        Migrate a conversation from a different format to chit."
+
+        Args:
+            json_file (str): Path to the JSON file containing the conversation data.
+            format (str): Format of the conversation data. Currently only "claude" is supported.
+        """
         if format == "claude":
             from chit.import_claude import import_claude
 

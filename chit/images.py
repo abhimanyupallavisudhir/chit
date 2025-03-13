@@ -64,8 +64,9 @@ def prepare_image_url(image_path: str | Path) -> str:
 def prepare_image_message(message: str, image_path: str | Path) -> list[dict[str, str]]:
     """
     Embed an image into a message using Markdown syntax.
-
-    image_path: Path to image file, URL, or '^V' to read from clipboard.
+    Args:
+        message (str): text component of message.
+        image_path (str | Path): Path to image file, URL, or '^V' to read from clipboard.
     """
     image_url = prepare_image_url(image_path)
     return [
