@@ -1,13 +1,13 @@
 from pathlib import Path
 import chit.config
 
-def cprint(*args, **kwargs):
+def wordcel(*args, **kwargs):
     """I can't get logging to print things in the right place in a notebook."""
     if chit.config.VERBOSE:
         print(*args, **kwargs)
 
 
-def cconfirm(prompt: str) -> bool:
+def annoy(prompt: str) -> bool:
     """Prompt the user to confirm an action."""
     if not chit.config.FORCE:
         response = input(f"{prompt} (y/n) ")

@@ -12,7 +12,7 @@ import string
 import random
 import litellm
 from litellm import completion, stream_chunk_builder
-from chit.utils import cprint, cconfirm
+from chit.utils import wordcel, annoy
 from chit.images import prepare_image_message
 import chit.config
 from litellm.types.utils import (
@@ -243,7 +243,7 @@ class Chat:
         # check that checked-out message does not already have a child in the checked-out branch
         if existing_child_id is not None:
             new_branch_name = self._generate_new_branch_name(self.current_branch)
-            cprint(
+            wordcel(
                 f"WARNING: Current message {self.current_id} already has a child message {existing_child_id} on branch {self.current_branch}. "
                 f"Creating new branch {new_branch_name} to avoid overwriting."
             )
@@ -342,7 +342,7 @@ class Chat:
         self.current_id = new_id
 
         if response_tool_calls:
-            cprint(
+            wordcel(
                 f"<<<{len(response_tool_calls)} tool calls pending; "
                 f"use .commit() to call one-by-one>>>"
             )
@@ -663,9 +663,9 @@ class Chat:
         else:
             # remote has priority
             updated_remote = Remote(**(data_remote_dict | remote_dict))
-        cprint(f"Remote specified in data: {Remote(**data_remote_dict)}")
-        cprint(f"Remote specified in argument: {Remote(**remote_dict)}")
-        cprint(f"Using remote: {updated_remote}")
+        wordcel(f"Remote specified in data: {Remote(**data_remote_dict)}")
+        wordcel(f"Remote specified in argument: {Remote(**remote_dict)}")
+        wordcel(f"Using remote: {updated_remote}")
         chat = cls(
             model=data.get("model", chit.config.DEFAULT_MODEL),
             tools=None,
@@ -679,7 +679,7 @@ class Chat:
         chat.root_id = data["root_id"]
         chat.branch_tips = data["branch_tips"]
         if data.get("_tools", None):
-            cprint(
+            wordcel(
                 f"WARNING: found the following tools in the remote: {data['_tools']} "
                 "but cannot add them as we do not have the functions. Please add them manually."
             )
@@ -892,7 +892,7 @@ class Chat:
                 commit_id = self._resolve_nonnegative_index(commit_id)
             else:
                 commit_id = self._resolve_negative_index(commit_id)
-        if not cconfirm(
+        if not annoy(
             f"Are you sure you want to delete {'commit ' + commit_id if commit_id else 'branch ' + branch_name}?"
         ):
             return
