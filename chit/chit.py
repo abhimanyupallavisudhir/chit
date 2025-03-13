@@ -82,6 +82,12 @@ class Remote:
             print(f"Initializing Remote({json_file}, {html_file})")
             self.json_file = json_file
             self.html_file = html_file
+    
+    def __str__(self):
+        return f"Remote({self.json_file}, {self.html_file})"
+
+    def __repr__(self):
+        return f"Remote({self.json_file}, {self.html_file})"
 
 
 class Chat:
