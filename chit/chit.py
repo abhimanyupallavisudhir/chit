@@ -404,9 +404,15 @@ class Chat:
 
         self.backup()
 
-    def show(self, message_id: str) -> None:
+    def show(self, message_id: str, mode: Literal["print", "return"] = "print") -> None | str:
         """Print the content of a message."""
-        print(self[message_id].message["content"])
+        content = self[message_id].message["content"]
+        if mode == "print":
+            print(content)
+        elif mode == "return":
+            return content
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
     def _resolve_forward_path(
         self, branch_path: list[str], start_id: Optional[str] = None
@@ -1151,31 +1157,37 @@ class Chat:
         res = "\n".join(log_lines)
         return res
 
-    def gui(self, file_path: Optional[str | Path] = None) -> None:
+    def gui(self, file_path: Optional[str | Path] = None, mode: Literal["print", "return"] = "print") -> None:
         """
         Create and open an interactive visualization of the chat tree.
 
         Args:
             file_path: Optional path where the HTML file should be saved.
                     If None, creates a temporary file instead.
+            mode: Whether to print the HTML content or return it as a string.
         """
         html_content = self._generate_viz_html()
 
-        if file_path is not None:
-            # Convert to Path object if string
-            path = Path(file_path)
-            # Create parent directories if they don't exist
-            path.parent.mkdir(parents=True, exist_ok=True)
-            # Write the file
-            path.write_text(html_content)
-            # Open in browser
-            webbrowser.open(f"file://{path.absolute()}")
+        if mode == "return":
+            return html_content
+        elif mode == "print":
+            if file_path is not None:
+                # Convert to Path object if string
+                path = Path(file_path)
+                # Create parent directories if they don't exist
+                path.parent.mkdir(parents=True, exist_ok=True)
+                # Write the file
+                path.write_text(html_content)
+                # Open in browser
+                webbrowser.open(f"file://{path.absolute()}")
+            else:
+                # Original temporary file behavior
+                with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as f:
+                    f.write(html_content)
+                    temp_path = f.name
+                webbrowser.open(f"file://{temp_path}")
         else:
-            # Original temporary file behavior
-            with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as f:
-                f.write(html_content)
-                temp_path = f.name
-            webbrowser.open(f"file://{temp_path}")
+            raise ValueError(f"Invalid mode: {mode}")
 
     def _prepare_messages_for_viz(self) -> dict[str, Any]:
         """Convert messages to a format suitable for visualization."""
@@ -1660,13 +1672,23 @@ class Chat:
 </html>
 """
 
-    def log(self, style: Literal["tree", "forum", "gui"] = "tree"):
-        if style == "tree":
-            print(self._log_tree())
-        elif style == "forum":
-            print(self._log_forum())
-        elif style == "gui":
-            self.gui()
+    def log(self, style: Literal["tree", "forum", "gui"] = "tree", mode: Literal["print", "return"] = "print") -> None | str:
+        if mode == "print":
+            if style == "tree":
+                print(self._log_tree())
+            elif style == "forum":
+                print(self._log_forum())
+            elif style == "gui":
+                self.gui()
+        elif mode == "return":
+            if style == "tree":
+                return self._log_tree()
+            elif style == "forum":
+                return self._log_forum()
+            elif style == "gui":
+                return self.gui(mode="return")
+        else:
+            raise ValueError(f"Invalid mode {mode}")
 
     @classmethod
     def migrate(cls, json_file: str, format: Literal["claude"] = "claude") -> "Chat":
