@@ -93,7 +93,7 @@ class Remote:
 class Chat:
     def __init__(
         self,
-        model: str = chit.config.DEFAULT_MODEL,
+        model: str = None,
         tools: list[callable] | None = None,
         remote: str | Remote | None = None,
         display_config: dict | None = None,
@@ -103,6 +103,7 @@ class Chat:
 
         Arguments:
             model (str): model name, in the [LiteLLM specification](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
+                Defaults to chit.config.DEFAULT_MODEL
             tools (list[callable]): list of tools available to the assistant. NOTE:
                 - if you use this, streaming will be turned off. You can still pass `enable_tools=False` to `commit()` to disable tools for a single commit.
                 - each tool should be a function which either has a `json` attribute of type dict, or has a numpydoc docstring.
@@ -124,7 +125,7 @@ class Chat:
             }
 
         """
-        self.model = model
+        self.model = model or chit.config.DEFAULT_MODEL
         self.remote: Remote | None = remote
         initial_id = self._generate_short_id()
         self.root_id = initial_id  # Store the root message ID
