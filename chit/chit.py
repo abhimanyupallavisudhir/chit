@@ -1635,8 +1635,8 @@ class Chat:
         }}
 
         function getBranchHierarchy() {{
-            // Start from root and traverse the tree to build actual branch relationships
-            const hierarchy = new Map();  // branch -> parent branch
+            // Create a mapping of branch to its immediate parent branch
+            const hierarchy = new Map();
             const visited = new Set();
 
             function traverse(messageId) {{
@@ -1666,27 +1666,33 @@ class Chat:
             const select = document.getElementById('globalBranchSelect');
             const branchHierarchy = getBranchHierarchy();
             
-            // Find root branches (those without parents or with 'master' as parent)
-            const branches = Array.from(branchHierarchy.keys());
-            const rootBranches = ['master', ...branches.filter(b => 
-                !branchHierarchy.has(b) || branchHierarchy.get(b) === 'master'
-            )];
-
-            function getBranchLevel(branch) {{
-                let level = 0;
-                let current = branch;
-                while (branchHierarchy.has(current)) {{
-                    level++;
-                    current = branchHierarchy.get(current);
-                }}
-                return level;
-            }}
-
+            // Get all branches
+            const allBranches = new Set(['master']);
+            Object.values(chatData.messages).forEach(msg => {{
+                Object.keys(msg.children).forEach(branch => {{
+                    allBranches.add(branch);
+                }});
+            }});
+            
+            // Track which branches have been processed
+            const processedBranches = new Set();
+            
+            // Find top-level branches (those that aren't children of any other branch)
+            const topLevelBranches = Array.from(allBranches).filter(branch => {{
+                // A branch is top-level if it's not a child in the hierarchy
+                return branch === 'master' || !Array.from(branchHierarchy.values()).includes(branch);
+            }});
+            
             function getChildren(parentBranch) {{
-                return branches.filter(b => branchHierarchy.get(b) === parentBranch);
+                return Array.from(branchHierarchy.entries())
+                    .filter(([_, parent]) => parent === parentBranch)
+                    .map(([child, _]) => child);
             }}
-
+            
             function renderBranch(branch, level) {{
+                if (processedBranches.has(branch)) return ''; // Skip if already processed
+                processedBranches.add(branch);
+                
                 const indent = '&nbsp;'.repeat(level * 2);
                 const selected = branch === chatData.current_branch ? 'selected' : '';
                 const option = `<option value="${{branch}}" ${{selected}}>${{indent}}${{branch}}</option>`;
@@ -1698,10 +1704,12 @@ class Chat:
                 }});
                 return html;
             }}
-
-            select.innerHTML = rootBranches.map(branch => renderBranch(branch, 0)).join('');
+            
+            select.innerHTML = '';
+            topLevelBranches.forEach(branch => {{
+                select.innerHTML += renderBranch(branch, 0);
+            }});
         }}
-
         function renderBranchOption(branch, level = 0) {{
             return `<option value="${{branch}}" ${{branch === chatData.current_branch ? 'selected' : ''}}>
                 ${{'&nbsp;'.repeat(level * 2)}}${{branch}}
