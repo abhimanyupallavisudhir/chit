@@ -246,13 +246,13 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
 - [x] autosave feature
 - [x] fix html visualization issue
 - [x] cleanup this repo
-- [ ] bugfixes
-    - [ ] fix visualization bug in global dropdown [PRIORITY]
+- [x] bugfixes
+    - [x] fix visualization bug in global dropdown [PRIORITY]
     - [x] fix claude imports
     - [x] fix "dictionary size changed during iteration" issue when removing commit with a child and a blank child
 - [x] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something. [PRIORITY]
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui
-    - [ ] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
+    - [x] global dropdown to select a branch; they should be shown with indentations reflecting their nesting
 - [ ] add imports from chatgpt, deepseek, xai, gemini, various LLM frontends etc. (only claude currently implemented)
