@@ -237,6 +237,9 @@ class Chat:
             # Parse editor specification
             editor_spec = message[2:].strip("/ ")
             message = self._capture_editor_content(editor_spec)
+        if message and message.startswith("^J"):
+            variable_spec = message[2:].strip("/ ")
+            message = self.jupyter_inputs[variable_spec] # let it raise an error if not present
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
             if current_role == "system":
@@ -406,6 +409,24 @@ class Chat:
             return content
         else:
             raise ValueError("No content added to editor")
+
+    @property
+    def jupyter_inputs(self) -> dict:
+        import nbformat as nbf
+        ntbk: dict = nbf.read(chit.config.JUPYTERNB, nbf.NO_CONVERT)
+        cells: list[dict] = ntbk["cells"]
+        md_cells: list[dict] = [cell for cell in cells if cell["cell_type"] == "markdown"]
+        cell_map: dict = {} # dict of first line of cell content to cell
+        # first line as in stuff between / and \n
+        for cell in md_cells:
+            text: str = cell["source"]
+            if not text.startswith("/ "):
+                continue
+            lines: list[str] = text.split("\n")
+            first_line: str = lines[0].strip("/ ")
+            contents: str = "\n".join(lines[1:])
+            cell_map[first_line] = contents
+        return cell_map
 
     def branch(self, branch_name: str, checkout: bool = True) -> None:
         if branch_name in self.branch_tips:

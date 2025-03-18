@@ -45,7 +45,7 @@ Here `web_search` should be a Python function with either (1) a `json` attribute
 
 Tool-calling is not compatible with streaming. If your chat has tools, you can pass `chat.commit(enable_tools=False)` to temporarily disable tools for that AI call and enable streaming.
 
-## alternative input methods
+## including files
 
 One convenient util is `chit.read()`, which makes it convenient to paste local file contents into your prompt, i.e.
 
@@ -65,7 +65,30 @@ Analyze and review the folowing code:
 chat.commit()
 ```
 
-Another useful thing you may like to do is use Jupyter's built-in text areas to input your text, e.g. to avoid syntax conflicts (like having to escape quotes manually):
+## alternate input methods
+
+One useful thing you might like to do, e.g. to avoid syntax conflicts (like having to escape quotes manually), is enter your prompt in a markdown cell, then commit it. To do so create a markdown cell like this:
+
+```markdown
+/some_name
+Enter your prompt here lorem ipsum whatever
+```
+
+Then commit as follows:
+
+```python
+chat.commit("^J/some_name")
+chat.commit()
+```
+
+Using this feature requires that:
+
+1. you have set `chit.config.JUPYTERNB` to the path of your current jupyter notebook. 
+2. your notebook is *saved*
+
+(because this feature works by reading and loading the json contents of your jupyter notebook, and [there is no reliable way to get the current jupyter notebook's path](https://stackoverflow.com/questions/52119454/how-to-obtain-jupyter-notebooks-path).)
+
+The above is the *recommended* way to pass complex text prompts. Another option is use Jupyter's built-in text areas to input your text:
 
 ```python
 import chit
@@ -155,6 +178,10 @@ chit.config.PRIORITIZE_DATA_REMOTE
 # default: False
 # whether the remote path stored in the data has priority compared to the path you're actually cloning from.
 # Set to False if e.g. you are cloning from a copy or move of the file in a different folder or machine.
+
+chit.config.JUPYTERNB
+# default: None
+# Set to path of the Jupyter notebook file you're using, in order to be able to use "^J" input.
 ```
 
 This is the first cell of my own personal chit notebook:
@@ -187,6 +214,7 @@ chit.config.FORCE = True
 chit.config.AUTOSAVE = True
 chit.config.EDITOR = "code"
 chit.config.PRIORITIZE_DATA_REMOTE=False
+chit.config.JUPYTERNB = "/home/manyu/gdrive/Gittable/chithub/doer.ipynb"
 chit.config.DISPLAY_CONFIG = {
     "title": "chitChat",
     "author": "Abhimanyu Pallavi Sudhir",
@@ -220,7 +248,7 @@ chat = chit.Chat.migrate("claude_export.json", format="claude")
     - [ ] fix visualization bug in global dropdown [PRIORITY]
     - [x] fix claude imports
     - [x] fix "dictionary size changed during iteration" issue when removing commit with a child and a blank child
-- [ ] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something. [PRIORITY]
+- [x] Implement better way to do Jupyter notebook inputs based on: [[1]](https://stackoverflow.com/questions/71235359/jupyter-notebook-move-cells-from-one-notebook-into-a-new-notebook/71244733#71244733), [[2]](https://stackoverflow.com/questions/46334525/how-to-copy-multiple-input-cells-in-jupyter-notebook/78123424#78123424) -- maybe the user should preface a markdown block with some name, and we automatically maintain a dict of such names to their following texts, and then send the prompt as `chat.commit('^J/name')` or something. [PRIORITY]
 - [ ] html gui improvements
     - [ ] i3-like gui
     - [ ] forum-like gui

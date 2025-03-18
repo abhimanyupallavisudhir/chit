@@ -51,3 +51,9 @@ DISPLAY_CONFIG = {
 """
 Configuration for gui visualization. Can be updated with the Chat-specific `display_config` attribute.
 """
+
+JUPYTERNB = None
+"""
+default: None
+Set to path of the Jupyter notebook file you're using, in order to be able to use "^J" input.
+"""
