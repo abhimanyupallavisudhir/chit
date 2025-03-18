@@ -6,3 +6,4 @@
 **/*.pyd
 .logs
 doer.ipynb
+*.egg-info

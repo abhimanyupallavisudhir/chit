@@ -67,12 +67,14 @@ chat.commit()
 
 ## alternate input methods
 
-One useful thing you might like to do, e.g. to avoid syntax conflicts (like having to escape quotes manually), is enter your prompt in a markdown cell, then commit it. To do so create a markdown cell like this:
+One useful thing you might like to do, e.g. to avoid syntax conflicts (like having to escape quotes manually), is enter your prompt in a markdown cell, then commit it. To do so first create a markdown cell:
 
 ```markdown
 /some_name
 Enter your prompt here lorem ipsum whatever
 ```
+
+`some_name` is a variable name for later reference -- just make sure that (1) it begins with a slash, to tell `chit` that it is a prompt, and (2) that it is unique.
 
 Then commit as follows:
 

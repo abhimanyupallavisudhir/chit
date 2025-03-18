@@ -70,7 +70,9 @@ class Remote:
         if json_file is None and html_file is None:
             raise ValueError("At least one of json_file or html_file must be specified")
         if html_file:
-            assert json_file.endswith(".json"), f"Attempted to initialize invalid remote: Remote({json_file}, {html_file})"
+            assert json_file.endswith(".json"), (
+                f"Attempted to initialize invalid remote: Remote({json_file}, {html_file})"
+            )
             self.json_file = json_file
             self.html_file = html_file
         else:
@@ -82,7 +84,7 @@ class Remote:
             print(f"Initializing Remote({json_file}, {html_file})")
             self.json_file = json_file
             self.html_file = html_file
-    
+
     def __str__(self):
         return f"Remote({self.json_file}, {self.html_file})"
 
@@ -239,7 +241,9 @@ class Chat:
             message = self._capture_editor_content(editor_spec)
         if message and message.startswith("^J"):
             variable_spec = message[2:].strip("/ ")
-            message = self.jupyter_inputs[variable_spec] # let it raise an error if not present
+            message = self.jupyter_inputs[
+                variable_spec
+            ]  # let it raise an error if not present
         if role is None:  # automatically infer role based on current message
             current_role = self[self.current_id].message["role"]
             if current_role == "system":
@@ -413,18 +417,26 @@ class Chat:
     @property
     def jupyter_inputs(self) -> dict:
         import nbformat as nbf
+
         ntbk: dict = nbf.read(chit.config.JUPYTERNB, nbf.NO_CONVERT)
         cells: list[dict] = ntbk["cells"]
-        md_cells: list[dict] = [cell for cell in cells if cell["cell_type"] == "markdown"]
-        cell_map: dict = {} # dict of first line of cell content to cell
+        md_cells: list[dict] = [
+            cell for cell in cells if cell["cell_type"] == "markdown"
+        ]
+        cell_map: dict = {}  # dict of first line of cell content to cell
         # first line as in stuff between / and \n
         for cell in md_cells:
             text: str = cell["source"]
-            if not text.startswith("/ "):
+            if not text.startswith("/"):
                 continue
             lines: list[str] = text.split("\n")
             first_line: str = lines[0].strip("/ ")
             contents: str = "\n".join(lines[1:])
+            if first_line in cell_map:
+                warnings.warn(
+                    f"Prompt name {first_line} associated with multiple cells "
+                    f"{cell_map[first_line][:30]} and {contents[:30]}; using the latter"
+                )
             cell_map[first_line] = contents
         return cell_map
 
@@ -445,12 +457,14 @@ class Chat:
 
         self.backup()
 
-    def show(self, message_id: str, mode: Literal["print", "return"] = "print") -> None | str:
+    def show(
+        self, message_id: str, mode: Literal["print", "return"] = "print"
+    ) -> None | str:
         """Print the content of a message.
-        
+
         Arguments:
             message_id (str): ID of the message to show
-            mode (str): whether to print the content or return it. 
+            mode (str): whether to print the content or return it.
         """
         content = self[message_id].message["content"]
         if mode == "print":
@@ -522,7 +536,7 @@ class Chat:
         branch_name: Optional[str] = None,
     ) -> None:
         """Checkout to a specific message or branch
-        
+
         Arguments:
             message_id (str, int, list[str]): ID of the message to checkout to. Can be:
                 - message ID (str)
@@ -709,7 +723,10 @@ class Chat:
             else:
                 # interpret as creating both json and html
                 remote_str: str = remote + ".json"
-                remote_dict: dict = {"json_file": remote_str, "html_file": remote + ".html"}
+                remote_dict: dict = {
+                    "json_file": remote_str,
+                    "html_file": remote + ".html",
+                }
         else:
             raise ValueError(
                 f"unrecognized remote type {type(remote)}; must be str, Remote or tuple"
@@ -952,11 +969,11 @@ class Chat:
         Remove a commit or branch.
 
         Args:
-            commit_id (str | int | None): ID (or alternate indexing) of the commit to remove. 
+            commit_id (str | int | None): ID (or alternate indexing) of the commit to remove.
                 If None, branch_name must be specified.
-            branch_name (str | None): Name of the branch to remove. If None, commit_id must 
+            branch_name (str | None): Name of the branch to remove. If None, commit_id must
                 be specified.
-        
+
         """
         if isinstance(commit_id, int):
             # allow negative and positive indices
@@ -980,7 +997,7 @@ class Chat:
 
     def mv(self, branch_name_old: str, branch_name_new: str) -> None:
         """Rename a branch throughout the tree.
-        
+
         Args:
             branch_name_old (str): Name of the branch to rename
             branch_name_new (str): New name for the branch
@@ -1231,7 +1248,11 @@ class Chat:
         res = "\n".join(log_lines)
         return res
 
-    def gui(self, file_path: Optional[str | Path] = None, mode: Literal["print", "return"] = "print") -> None:
+    def gui(
+        self,
+        file_path: Optional[str | Path] = None,
+        mode: Literal["print", "return"] = "print",
+    ) -> None:
         """
         Create and open an interactive visualization of the chat tree.
 
@@ -1256,7 +1277,9 @@ class Chat:
                 webbrowser.open(f"file://{path.absolute()}")
             else:
                 # Original temporary file behavior
-                with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as f:
+                with tempfile.NamedTemporaryFile(
+                    "w", suffix=".html", delete=False
+                ) as f:
                     f.write(html_content)
                     temp_path = f.name
                 webbrowser.open(f"file://{temp_path}")
@@ -1746,12 +1769,16 @@ class Chat:
 </html>
 """
 
-    def log(self, style: Literal["tree", "forum", "gui"] = "tree", mode: Literal["print", "return"] = "print") -> None | str:
+    def log(
+        self,
+        style: Literal["tree", "forum", "gui"] = "tree",
+        mode: Literal["print", "return"] = "print",
+    ) -> None | str:
         """
         Generate a visualization of the conversation history.
 
         style="tree" looks like this:
-        
+
         ```
         001e1e──ab2839──29239b──f2foif9──f2f2f2 (master)
                       ├─bb2b2b──adaf938 (features)
@@ -1761,9 +1788,9 @@ class Chat:
                       └─r228df──f2f2f2 (publishing)
                               └─j38392──b16327 (pypi)
         ```
-        
+
         style="forum" looks like this:
-        
+
         ```
         [S] 001e1e: You are a helpful assista...
             [U] ab2839: Hello I am Dr James and I...
@@ -1783,7 +1810,7 @@ class Chat:
         ```
 
         style="gui" opens a GUI visualization in the browser.
-        
+
         Args:
             style (str): Style of visualization ("tree", "forum", "gui")
             mode (str): Whether to print the visualization or return it as a string"
@@ -1807,7 +1834,7 @@ class Chat:
 
     @classmethod
     def migrate(cls, json_file: str, format: Literal["claude"] = "claude") -> "Chat":
-        """"
+        """ "
         Migrate a conversation from a different format to chit."
 
         Args:
