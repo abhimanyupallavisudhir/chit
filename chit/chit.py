@@ -218,6 +218,32 @@ class Chat:
                 new_branch_name = f"{new_branch_name}_1"
         return new_branch_name
 
+    @classmethod
+    def _render_message_with_references(
+        cls,
+        message: ChatCompletionMessage,
+        references: list[str],
+        markdown: bool = True,
+    ) -> ChatCompletionMessage:
+        """Render message with references as footnotes using _render_references"""
+        if not references:
+            return message
+        if markdown:
+            # replace [1] with [^1] in message.content:
+            message.content = re.sub(r"\[(\d+)\]", r"[^\1]", message.content)
+        message.content += cls._render_references(references, markdown=markdown)
+        return message
+
+    @classmethod
+    def _render_references(cls, references: list[str], markdown: bool = True) -> str:
+        """Render references as footnotes"""
+        if not references:
+            return ""
+        return "\n\n---\n\n" + "\n".join(
+            f"[{'^' if markdown else ''}{i + 1}]: {ref}"
+            for i, ref in enumerate(references)
+        )
+
     def commit(
         self,
         message: str | None = None,
@@ -306,7 +332,11 @@ class Chat:
                     stream=False,
                 )
                 message_full: ChatCompletionMessage = response.choices[0].message
-                print(message_full.content)
+                references = getattr(response, "citations", [])
+                message_full: ChatCompletionMessage = (
+                    self._render_message_with_references(message_full, references)
+                )
+                print(message_full.content)  # reminder: resist your urge to delete this
                 response_tool_calls: list[ChatCompletionMessageToolCall] | None = (
                     message_full.tool_calls
                 )
@@ -318,6 +348,12 @@ class Chat:
                     chunks.append(chunk)
                 response = stream_chunk_builder(chunks, messages=history)
                 message_full: ChatCompletionMessage = response.choices[0].message
+                references = getattr(response, "citations", [])
+                message_full: ChatCompletionMessage = (
+                    self._render_message_with_references(message_full, references)
+                )
+                reference_str = self._render_references(references)
+                print(reference_str)  # print references separately
 
         if role == "tool":
             # when we pop tool calls, it should not modify previous history

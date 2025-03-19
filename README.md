@@ -191,10 +191,12 @@ This is the first cell of my own personal chit notebook:
 ```python
 import chit
 import chit.config
+from chit import Remote
 from chit.utils import read, textput
 
 %load_ext autoreload
 %autoreload 2
+
 
 ALIASES = {
     "claude": "openrouter/anthropic/claude-3.5-sonnet",
@@ -208,14 +210,19 @@ ALIASES = {
     "o1": "openrouter/openai/o1",
     "o3-mini-high": "openrouter/openai/o3-mini-high",
     "o3-mini": "openrouter/openai/o3-mini",
+    "ppx/basic": "openrouter/perplexity/sonar",
+    "ppx/pro": "openrouter/perplexity/sonar-pro",
+    # "ppx/rbasic": "openrouter/perplexity/sonar-reasoning", # nobody uses these
+    # "ppx/rpro": "openrouter/perplexity/sonar-reasoning-pro",
+    "ppx/dr": "openrouter/perplexity/sonar-deep-research",
 }
 
-chit.config.DEFAULT_MODEL = ALIASES["claude"]
+chit.config.DEFAULT_MODEL = ALIASES["claude3.7"]
 chit.config.VERBOSE = True
 chit.config.FORCE = True
 chit.config.AUTOSAVE = True
+chit.config.PRIORITIZE_DATA_REMOTE = False
 chit.config.EDITOR = "code"
-chit.config.PRIORITIZE_DATA_REMOTE=False
 chit.config.JUPYTERNB = "/home/manyu/gdrive/Gittable/chithub/doer.ipynb"
 chit.config.DISPLAY_CONFIG = {
     "title": "chitChat",
@@ -223,7 +230,6 @@ chit.config.DISPLAY_CONFIG = {
     "show_model": True,
     "show_tools": True,
     "max_tools": 5,
-    "dark": True,
     "css": ""
 }
 ```
