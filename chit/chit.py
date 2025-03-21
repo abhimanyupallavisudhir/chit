@@ -247,7 +247,7 @@ class Chat:
     def commit(
         self,
         message: str | None = None,
-        image_path: str | Path | None = None,
+        image_path: str | Path | list[str|Path] | None = None,
         role: str = None,
         enable_tools=True,
     ) -> str:

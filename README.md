@@ -31,7 +31,9 @@ We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so
 
 ## images
 
-Vision is supported, including images from the clipboard like so: `chat.commit("Analyze this image.", image_path = '^V')`.
+Vision is supported, from the clipboard like so: `chat.commit("Analyze this image.", image_path = '^V')`. `image_path` can be a public URL, local file path or `^V` -- or, to input multiple images, a list.
+
+This [also works with PDFs](https://docs.litellm.ai/docs/completion/document_understanding) though it needs to be a public online PDF.
 
 ## tool use
 
