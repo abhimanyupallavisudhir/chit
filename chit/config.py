@@ -61,3 +61,7 @@ Set to path of the Jupyter notebook file you're using, in order to be able to us
 """
 
 DEFAULT_MODE: Literal["print", "return", "print_md"] = "print_md"
+"""
+default: "print_md""
+Default behaviour of functions: return, print, or print as markdown?
+"""

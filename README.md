@@ -186,6 +186,10 @@ chit.config.PRIORITIZE_DATA_REMOTE
 chit.config.JUPYTERNB
 # default: None
 # Set to path of the Jupyter notebook file you're using, in order to be able to use "^J" input.
+
+chit.config.DEFAULT_MODE: Literal["print", "return", "print_md"] = "print_md"
+# default: "print_md""
+# Default behaviour of functions: return, print, or print as markdown?
 ```
 
 This is the first cell of my own personal chit notebook:
@@ -234,6 +238,7 @@ chit.config.DISPLAY_CONFIG = {
     "max_tools": 5,
     "css": ""
 }
+chit.config.DEFAULT_MODE = "print_md"
 ```
 
 ## imports
