@@ -250,6 +250,7 @@ class Chat:
         image_path: str | Path | list[str|Path] | None = None,
         role: str = None,
         enable_tools=True,
+        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
     ) -> str:
         """
         Commit a message to the chat history.
@@ -260,6 +261,8 @@ class Chat:
             role (str): role of the message (user, assistant, system, tool)
             enable_tools (bool): turn off to disable tool use in a chat that
                 otherwise has tools (e.g. to enable streaming)
+            mode (str): how to output responses: "print", "return", or "print_md" (markdown)
+                Defaults to chit.config.DEFAULT_MODE
         """
         if message and message.startswith("^N"):
             # Parse editor specification
@@ -336,16 +339,35 @@ class Chat:
                 message_full: ChatCompletionMessage = (
                     self._render_message_with_references(message_full, references)
                 )
-                print(message_full.content)  # reminder: resist your urge to delete this
                 response_tool_calls: list[ChatCompletionMessageToolCall] | None = (
                     message_full.tool_calls
                 )
+
+                # Output based on mode
+                if mode == "print":
+                    print(message_full.content)
+                elif mode == "print_md":
+                    from IPython.display import display, Markdown
+                    display(Markdown(message_full.content))
+                # For "return" mode, we don't output anything here, just return at the end
+
             else:
+                # Handle streaming
                 _response = completion(model=self.model, messages=history, stream=True)
                 chunks = []
+                full_response = "" # for print_md                        
+
                 for chunk in _response:
-                    print(chunk.choices[0].delta.content or "", end="")
+                    if mode == "print_md":
+                        from IPython.display import display, Markdown, clear_output
+                        content_delta = chunk.choices[0].delta.content or ""
+                        full_response += content_delta
+                        clear_output(wait=True)
+                        display(Markdown(full_response))
+                    if mode == "print":
+                        print(chunk.choices[0].delta.content or "", end="")
                     chunks.append(chunk)
+                
                 response = stream_chunk_builder(chunks, messages=history)
                 message_full: ChatCompletionMessage = response.choices[0].message
                 references = getattr(response, "citations", [])
@@ -353,7 +375,11 @@ class Chat:
                     self._render_message_with_references(message_full, references)
                 )
                 reference_str = self._render_references(references)
-                print(reference_str)  # print references separately
+                if mode == "print":
+                    print(reference_str)  # print references separately
+                elif mode == "print_md":
+                    from IPython.display import display, Markdown
+                    display(Markdown(reference_str))
 
         if role == "tool":
             # when we pop tool calls, it should not modify previous history
@@ -411,6 +437,9 @@ class Chat:
             )
 
         self.backup()
+
+        if mode == "return":
+            return message_full.content
 
         # return new_message.message["content"]
 
@@ -494,7 +523,7 @@ class Chat:
         self.backup()
 
     def show(
-        self, message_id: str, mode: Literal["print", "return"] = "print"
+        self, message_id: str, mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE
     ) -> None | str:
         """Print the content of a message.
 
@@ -505,6 +534,9 @@ class Chat:
         content = self[message_id].message["content"]
         if mode == "print":
             print(content)
+        elif mode == "print_md":
+            from IPython.display import display, Markdown
+            display(Markdown(content))
         elif mode == "return":
             return content
         else:
@@ -1287,7 +1319,7 @@ class Chat:
     def gui(
         self,
         file_path: Optional[str | Path] = None,
-        mode: Literal["print", "return"] = "print",
+        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
     ) -> None:
         """
         Create and open an interactive visualization of the chat tree.
@@ -1301,7 +1333,7 @@ class Chat:
 
         if mode == "return":
             return html_content
-        elif mode == "print":
+        elif mode in ["print", "print_md"]: # no special handling for print_md
             if file_path is not None:
                 # Convert to Path object if string
                 path = Path(file_path)
@@ -1816,7 +1848,7 @@ class Chat:
     def log(
         self,
         style: Literal["tree", "forum", "gui"] = "tree",
-        mode: Literal["print", "return"] = "print",
+        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
     ) -> None | str:
         """
         Generate a visualization of the conversation history.
@@ -1859,7 +1891,7 @@ class Chat:
             style (str): Style of visualization ("tree", "forum", "gui")
             mode (str): Whether to print the visualization or return it as a string"
         """
-        if mode == "print":
+        if mode in ["print", "print_md"]: # no special markdown rendering
             if style == "tree":
                 print(self._log_tree())
             elif style == "forum":

@@ -1,3 +1,5 @@
+from typing import Literal
+
 DEFAULT_MODEL = "openrouter/anthropic/claude-3.5-sonnet"
 """
 default: "openrouter/anthropic/claude-3.5-sonnet"
@@ -57,3 +59,5 @@ JUPYTERNB = None
 default: None
 Set to path of the Jupyter notebook file you're using, in order to be able to use "^J" input.
 """
+
+DEFAULT_MODE: Literal["print", "return", "print_md"] = "print_md"
