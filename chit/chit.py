@@ -250,6 +250,7 @@ class Chat:
         image_path: str | Path | list[str|Path] | None = None,
         role: str = None,
         enable_tools=True,
+        enable_streaming=True,
         mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
     ) -> str:
         """
@@ -261,6 +262,8 @@ class Chat:
             role (str): role of the message (user, assistant, system, tool)
             enable_tools (bool): turn off to disable tool use in a chat that
                 otherwise has tools (e.g. to enable streaming)
+            enable_streaming (bool): turn off to disable streaming e.g. for properly
+                returning citations with openrouter-provided perplexity models
             mode (str): how to output responses: "print", "return", or "print_md" (markdown)
                 Defaults to chit.config.DEFAULT_MODE
         """
@@ -326,7 +329,7 @@ class Chat:
         if role == "assistant" and message is None:
             # Generate AI response
             history = self._get_message_history()
-            if hasattr(self, "tools_") and self.tools_ and enable_tools:
+            if (hasattr(self, "tools_") and self.tools_ and enable_tools) or not enable_streaming:
                 response = completion(
                     model=self.model,
                     messages=history,
@@ -350,7 +353,6 @@ class Chat:
                     from IPython.display import display, Markdown
                     display(Markdown(message_full.content))
                 # For "return" mode, we don't output anything here, just return at the end
-
             else:
                 # Handle streaming
                 _response = completion(model=self.model, messages=history, stream=True)

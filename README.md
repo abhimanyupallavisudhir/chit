@@ -27,7 +27,7 @@ Change the model by directly modifying the `model` attribute e.g.
 chat.model = "openrouter/anthropic/claude-3.7-sonnet"
 ```
 
-We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions (very useful comprehensive list [here](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)).
+We use [litellm](https://github.com/BerriAI/litellm) for the LLM completions, so use their model naming conventions (very useful comprehensive list [here](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)) and set API keys in the environment variables [using their conventions](https://github.com/BerriAI/litellm?tab=readme-ov-file#usage-docs).
 
 ## images
 
@@ -45,7 +45,7 @@ chat.tools.append(web_search)
 
 Here `web_search` should be a Python function with either (1) a `json` attribute in the [OpenAI specification](https://docs.litellm.ai/docs/completion/function_call) or (2) a numpy-style docstring, which lets us automatically calculate the json attribute using `litellm.utils.function_to_dict`.
 
-Tool-calling is not compatible with streaming. If your chat has tools, you can pass `chat.commit(enable_tools=False)` to temporarily disable tools for that AI call and enable streaming.
+Tool-calling is not compatible with streaming. If your chat has tools, you can pass `chat.commit(enable_tools=False)` to temporarily disable tools for that AI call and enable streaming (make sure you pass this on the commit that actually makes the AI call--not your user message!).
 
 ## including files
 
@@ -125,6 +125,17 @@ chat.commit()
 
 And can also specify a specific editor like `^N/code` (which runs `code /tmp/whatever.txt`) or ``^N/gnome-terminal$vim` (which runs `gnome-terminal -- vim /tmp/whatever.txt`). However `^N` is currently quite broken and unreliable, especially in a Jupyter notebook -- it does not work with the `terminal$editor` setup at all, and is unreliable even with `code`. I recommend just using jupyter text areas for now.
 
+## search
+
+Perplexity models are supported by LiteLLM, and therefore by us. However it is a [known issue](https://github.com/BerriAI/litellm/issues/9358) (maybe with LiteLLM, maybe with OpenRouter) that *openrouter-provided perplexity models, with streaming turned on, do not return references* -- to circumvent this:
+
+```python
+chat = chit.Chat(model="openrouter/perplexity/sonar")
+chat.commit("Testing")
+chat.commit(enable_streaming=False)
+```
+
+This does not affect you if you are using a Perplexity API key directly.
 
 ## indexing
 
