@@ -1,6 +1,6 @@
 [project]
 name = "chitgpt"
-version = "1.26.0"
+version = "1.27.0"
 description = "git-like system for llm chats"
 readme = "README.md"
 requires-python = ">=3.10"

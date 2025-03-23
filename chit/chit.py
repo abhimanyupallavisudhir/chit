@@ -223,26 +223,49 @@ class Chat:
         cls,
         message: ChatCompletionMessage,
         references: list[str],
-        markdown: bool = True,
+        format: Literal["markdown", "simple"] = "simple"
     ) -> ChatCompletionMessage:
-        """Render message with references as footnotes using _render_references"""
+        """Render message with references as footnotes using _render_references.
+        
+        Arguments:
+            message (ChatCompletionMessage): message to render
+            references (list[str]): list of references to render as footnotes
+            format (str): Format to display footnotes in
+                "markdown": show footnotes as `[^1]` inline, and `[^1]: ...` at the end
+                "simple": show footnotes as `[1]` inline, and `\n[1]: ...` at the end
+        """
         if not references:
             return message
-        if markdown:
+        if format == "markdown":
             # replace [1] with [^1] in message.content:
             message.content = re.sub(r"\[(\d+)\]", r"[^\1]", message.content)
-        message.content += cls._render_references(references, markdown=markdown)
+        message.content += cls._render_references(references, format=format)
         return message
 
     @classmethod
-    def _render_references(cls, references: list[str], markdown: bool = True) -> str:
-        """Render references as footnotes"""
+    def _render_references(cls, references: list[str], format: Literal["markdown", "simple"] = "simple") -> str:
+        """Render references as footnotes
+        
+        Arguments:
+            references (list[str]): list of references to render as footnotes
+            format (str): Format to display footnotes in
+                "markdown": show footnotes as `[^1]` inline, and `[^1]: ...` at the end
+                "simple": show footnotes as `[1]` inline, and `\n[1] ...` at the end            
+        """
         if not references:
             return ""
-        return "\n\n---\n\n" + "\n".join(
-            f"[{'^' if markdown else ''}{i + 1}]: {ref}"
-            for i, ref in enumerate(references)
-        )
+        if format == "markdown":
+            reflist = "\n".join(
+                f"[^{i + 1}]: {ref}"
+                for i, ref in enumerate(references)
+            )
+        elif format == "simple":
+            reflist = "\n".join(
+                f"\n[{i + 1}] {ref}"
+                for i, ref in enumerate(references)
+            )
+
+        return "\n\n---\n\n" + reflist
 
     def commit(
         self,
