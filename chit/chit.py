@@ -274,7 +274,7 @@ class Chat:
         role: str = None,
         enable_tools=True,
         enable_streaming=True,
-        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
+        mode: Literal["print", "return", "print_md"] = None,
     ) -> str:
         """
         Commit a message to the chat history.
@@ -290,6 +290,7 @@ class Chat:
             mode (str): how to output responses: "print", "return", or "print_md" (markdown)
                 Defaults to chit.config.DEFAULT_MODE
         """
+        mode = mode or chit.config.DEFAULT_MODE
         if message and message.startswith("^N"):
             # Parse editor specification
             editor_spec = message[2:].strip("/ ")
@@ -548,7 +549,7 @@ class Chat:
         self.backup()
 
     def show(
-        self, message_id: str, mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE
+        self, message_id: str, mode: Literal["print", "return", "print_md"] = None, 
     ) -> None | str:
         """Print the content of a message.
 
@@ -556,6 +557,7 @@ class Chat:
             message_id (str): ID of the message to show
             mode (str): whether to print the content or return it.
         """
+        mode = mode or chit.config.DEFAULT_MODE
         content = self[message_id].message["content"]
         if mode == "print":
             print(content)
@@ -784,7 +786,7 @@ class Chat:
     def clone(
         cls,
         remote: str | Remote,
-        prioritize_data_remote: bool = chit.config.PRIORITIZE_DATA_REMOTE,
+        prioritize_data_remote: bool = None,
     ) -> "Chat":
         """Create new Chat instance from remote file
 
@@ -804,6 +806,7 @@ class Chat:
                 different folder or machine.
 
         """
+        prioritize_data_remote = prioritize_data_remote or chit.config.PRIORITIZE_DATA_REMOTE
         if isinstance(remote, tuple):
             remote = Remote(*remote)
         if isinstance(remote, Remote):
@@ -1344,7 +1347,7 @@ class Chat:
     def gui(
         self,
         file_path: Optional[str | Path] = None,
-        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
+        mode: Literal["print", "return", "print_md"] = None,
     ) -> None:
         """
         Create and open an interactive visualization of the chat tree.
@@ -1354,6 +1357,7 @@ class Chat:
                     If None, creates a temporary file instead.
             mode: Whether to print the HTML content or return it as a string.
         """
+        mode = mode or chit.config.DEFAULT_MODE
         html_content = self._generate_viz_html()
 
         if mode == "return":
@@ -1873,7 +1877,7 @@ class Chat:
     def log(
         self,
         style: Literal["tree", "forum", "gui"] = "tree",
-        mode: Literal["print", "return", "print_md"] = chit.config.DEFAULT_MODE,
+        mode: Literal["print", "return", "print_md"] = None,
     ) -> None | str:
         """
         Generate a visualization of the conversation history.
@@ -1916,6 +1920,7 @@ class Chat:
             style (str): Style of visualization ("tree", "forum", "gui")
             mode (str): Whether to print the visualization or return it as a string"
         """
+        mode = mode or chit.config.DEFAULT_MODE
         if mode in ["print", "print_md"]: # no special markdown rendering
             if style == "tree":
                 print(self._log_tree())

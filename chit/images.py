@@ -42,7 +42,8 @@ def prepare_image_url(image_path: str | Path) -> str:
             response = requests.head(image_path)
             content_type = response.headers.get("content-type", "")
             if not content_type.startswith("image/"):
-                raise ValueError(f"URL does not point to an image: {content_type}")
+                # raise ValueError(f"URL does not point to an image: {content_type}")
+                return image_path # can be e.g. a PDF
             return image_path
     except Exception:
         pass
