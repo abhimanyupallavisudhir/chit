@@ -563,7 +563,7 @@ class Chat:
             print(content)
         elif mode == "print_md":
             from IPython.display import display, Markdown
-            display(Markdown(content))
+            display(Markdown(content)) 
         elif mode == "return":
             return content
         else:
