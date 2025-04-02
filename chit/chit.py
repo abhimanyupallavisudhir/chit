@@ -275,6 +275,7 @@ class Chat:
         enable_tools=True,
         enable_streaming=True,
         mode: Literal["print", "return", "print_md"] = None,
+        history_length: int | None = None,
     ) -> str:
         """
         Commit a message to the chat history.
@@ -352,7 +353,7 @@ class Chat:
 
         if role == "assistant" and message is None:
             # Generate AI response
-            history = self._get_message_history()
+            history = self._get_message_history(history_length)
             if (hasattr(self, "tools_") and self.tools_ and enable_tools) or not enable_streaming:
                 response = completion(
                     model=self.model,
@@ -670,14 +671,15 @@ class Chat:
 
         self.backup()
 
-    def _get_message_history(self) -> list[dict[str, str]]:
+    def _get_message_history(self, history_length=None) -> list[dict[str, str]]:
         """Reconstruct message history from current point back to root"""
         history = []
         current = self.current_id
-
-        while current is not None:
+        len_history: int = 0
+        while current is not None and (history_length is None or len_history < history_length):
             msg = self.messages[current]
             history.insert(0, msg.message)
+            len_history += 1
             current = msg.parent_id
 
         return history
