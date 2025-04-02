@@ -290,6 +290,7 @@ class Chat:
                 returning citations with openrouter-provided perplexity models
             mode (str): how to output responses: "print", "return", or "print_md" (markdown)
                 Defaults to chit.config.DEFAULT_MODE
+            history_length (int | None): number of messages to send to AI, or None to send all
         """
         mode = mode or chit.config.DEFAULT_MODE
         if message and message.startswith("^N"):
@@ -672,7 +673,11 @@ class Chat:
         self.backup()
 
     def _get_message_history(self, history_length=None) -> list[dict[str, str]]:
-        """Reconstruct message history from current point back to root"""
+        """Reconstruct message history from current point back to root.
+
+        Arguments:
+            history_len (int | None): number of most recent messages to send, or None to send all
+        """
         history = []
         current = self.current_id
         len_history: int = 0
