@@ -1,3 +1,5 @@
+Don't use this, it is sub-optimal. Use https://github.com/karthink/gptel in emacs instead.
+
 # chit
 
 `chit` is a git-analogous system for managing LLM chat conversations in a Jupyter notebook. Install as `pip install chitgpt`.
